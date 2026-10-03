@@ -1,0 +1,54 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile (production = App Store / TestFlight, preview = test install on registered iPhones)"
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - preview
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check EXPO_TOKEN secret
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN secret is missing. Add it in Settings > Secrets and variables > Actions > Secrets > New repository secret."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check Expo login
+        run: eas whoami
+
+      - name: Link Expo project
+        run: eas init --non-interactive --force
+
+      - name: Build iOS app
+        run: eas build --platform ios --profile ${{ inputs.profile }} --non-interactive --no-wait

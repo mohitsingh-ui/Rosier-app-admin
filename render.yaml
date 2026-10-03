@@ -1,0 +1,34 @@
+# One-click deploy of the Rosier app backend + admin panel on Render.
+# Render dashboard → New → Blueprint → pick this GitHub repo.
+services:
+  - type: web
+    name: rosier-app-backend
+    runtime: node
+    plan: starter            # always on, so the app never waits for a cold start
+    region: singapore        # closest Render region to India
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rosier-app-db
+          property: connectionString
+      # First admin login — fill these in when Render asks (you can change the password later in the panel).
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: rosier-app-db
+    plan: basic-256mb        # paid Postgres; Render's free database is deleted after 30 days
+    region: singapore
+    databaseName: rosier_app

@@ -1,0 +1,417 @@
+{
+  "general": {
+    "logo": "https://www.rosierfoods.com/cdn/shop/files/black-logo-01_7f1cd910-121f-49c7-bdcf-248849cd14f5.webp?width=600",
+    "tagline": "Reviving the tradition of Bharat",
+    "footerNote": "Made with love in Bharat 🇮🇳",
+    "welcomeNotification": {
+      "title": "Welcome to Rosier 🌾",
+      "body": "We just added welcome coins to your wallet. Use them on your first order."
+    },
+    "maintenance": {
+      "enabled": false,
+      "title": "We'll be right back",
+      "message": "We're sprucing up the app. Please check back in a little while.",
+      "image": ""
+    },
+    "update": {
+      "minVersion": "1.0.0",
+      "force": false,
+      "title": "A fresh update is here",
+      "message": "Update the Rosier app to get the latest offers and a smoother experience.",
+      "androidUrl": "https://play.google.com/store/apps/details?id=com.rosierfoods.app",
+      "iosUrl": ""
+    }
+  },
+
+  "onboarding": {
+    "reshowVersion": 1,
+    "background": "#F1DCC3",
+    "accent": "#B8662F",
+    "skipLabel": "Skip",
+    "buttonLabel": "Get Started",
+    "namePlaceholder": "What should we call you?",
+    "welcomeNote": "🎁 {welcomeBonus} welcome coins are already in your wallet.",
+    "slides": [
+      {
+        "id": "brand",
+        "enabled": true,
+        "art": "collage",
+        "showLogo": true,
+        "title": "ROSIER FOODS",
+        "sub": "Reviving the tradition of Bharat.\nPure food, made the old way.",
+        "image": "",
+        "images": [
+          "product:high-protein-oats-kulfi-masti",
+          "product:mango-pickle",
+          "product:a2-desi-cow-ghee-hand-churned-from-curd",
+          "product:wood-pressed-black-mustard-oil",
+          "product:khapli-emmer-wheat-atta-stoneground-high-fiber-for-gut-health",
+          "product:wild-flower-honey",
+          "product:nut-butter-dark-chocolate"
+        ],
+        "chips": [],
+        "showNameInput": false
+      },
+      {
+        "id": "bilona",
+        "enabled": true,
+        "art": "churn",
+        "showLogo": false,
+        "title": "THE BILONA WAY",
+        "sub": "Our A2 ghee starts as curd, not cream.\nSlow churned by hand, never rushed.",
+        "image": "product:a2-desi-cow-ghee-hand-churned-from-curd",
+        "images": [],
+        "chips": [
+          { "icon": "water-outline", "label": "Gir cow milk" },
+          { "icon": "beaker-outline", "label": "Set into curd" },
+          { "icon": "sync", "label": "Bilona churned" },
+          { "icon": "fire", "label": "Slow cooked" }
+        ],
+        "showNameInput": false
+      },
+      {
+        "id": "coins",
+        "enabled": true,
+        "art": "coins",
+        "showLogo": false,
+        "title": "ROSIER COINS",
+        "sub": "Every order earns you coins.\nSwap them for real discounts.",
+        "image": "",
+        "images": [],
+        "chips": [],
+        "showNameInput": true
+      }
+    ]
+  },
+
+  "popup": {
+    "enabled": false,
+    "id": "launch-1",
+    "frequency": "once",
+    "image": "",
+    "title": "",
+    "body": "",
+    "buttonLabel": "Shop now",
+    "link": "/collections/all",
+    "startAt": "",
+    "endAt": ""
+  },
+
+  "home": {
+    "searchPlaceholder": "search for ghee, Khapli, oil...",
+    "showCoinsBanner": true,
+    "coinsBanner": {
+      "title": "Every Order.\nMore Rewards.",
+      "body": "Earn Rosier Coins on every purchase & unlock exclusive benefits.",
+      "button": "See Benefits"
+    },
+    "heroSource": "website",
+    "heroBanners": [
+      {
+        "id": "ghee",
+        "enabled": true,
+        "kind": "card",
+        "image": "product:a2-desi-cow-ghee-hand-churned-from-curd",
+        "title": "A2 Gir\nCow Ghee",
+        "sub": "Made from curd, the bilona way. Slow churned, never rushed.",
+        "colors": ["#FFF3D6", "#F6D98C", "#E9B955"],
+        "light": false,
+        "link": "/products/a2-desi-cow-ghee-hand-churned-from-curd",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "khapli",
+        "enabled": true,
+        "kind": "card",
+        "image": "product:khapli-emmer-wheat-atta-stoneground-high-fiber-for-gut-health",
+        "title": "Khapli\nAtta",
+        "sub": "Ancient emmer wheat, stone ground on a chakki.",
+        "colors": ["#E9F1DD", "#B8CFA0", "#7E9C62"],
+        "light": false,
+        "link": "/products/khapli-emmer-wheat-atta-stoneground-high-fiber-for-gut-health",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "oats",
+        "enabled": true,
+        "kind": "card",
+        "image": "product:high-protein-oats-mango-tango",
+        "title": "High Protein\nOats",
+        "sub": "Breakfast that keeps you full till lunch.",
+        "colors": ["#5A2E14", "#8C4A22", "#C47A48"],
+        "light": true,
+        "link": "/collections/oats",
+        "startAt": "",
+        "endAt": ""
+      }
+    ],
+    "tilesSource": "website",
+    "tiles": [],
+    "sections": [
+      { "id": "categories", "type": "categories", "enabled": true, "title": "Discover category" },
+      { "id": "deals", "type": "deals", "enabled": true, "title": "Limited deals", "handles": [] },
+      { "id": "benefits", "type": "benefits", "enabled": true },
+      {
+        "id": "bestsellers",
+        "type": "grid",
+        "enabled": true,
+        "title": "Loved Across Generations",
+        "subtitle": "The bestsellers our families keep coming back for",
+        "handles": [
+          "a2-desi-cow-ghee-hand-churned-from-curd",
+          "wild-flower-honey",
+          "khapli-emmer-wheat-atta-stoneground-high-fiber-for-gut-health",
+          "high-protein-oats-kulfi-masti",
+          "wood-pressed-black-mustard-oil",
+          "mango-pickle"
+        ],
+        "category": "",
+        "limit": 6,
+        "showViewAll": false
+      },
+      {
+        "id": "combos",
+        "type": "grid",
+        "enabled": true,
+        "title": "Buy More, Save More",
+        "subtitle": "",
+        "handles": [],
+        "category": "combos",
+        "limit": 4,
+        "showViewAll": true
+      },
+      {
+        "id": "ghee-strip",
+        "type": "promo",
+        "enabled": true,
+        "kicker": "India's Best",
+        "title": "A2 Ghee",
+        "body": "From free-grazing Gir cows. Churned from curd.",
+        "button": "Shop Now →",
+        "image": "product:a2-desi-cow-ghee-hand-churned-from-curd",
+        "colors": ["#FFF4DC", "#F6D98C"],
+        "link": "/products/a2-desi-cow-ghee-hand-churned-from-curd"
+      },
+      {
+        "id": "exciting",
+        "type": "row",
+        "enabled": true,
+        "title": "Exciting deals",
+        "handles": [
+          "high-protein-oats-cafe-latte",
+          "high-protein-oats-kulfi-masti",
+          "high-protein-oats-mango-tango",
+          "instant-oats-oats-double-chocolate",
+          "instant-oats-banana-cinnamon",
+          "mango-pickle",
+          "lemon-pickle",
+          "sweet-lemon-pickle"
+        ],
+        "category": "",
+        "link": "/collections/all"
+      },
+      { "id": "reviews", "type": "reviews", "enabled": true, "title": "More Than a Brand, A Family", "subtitle": "जड़ों से जुड़े लोग, असली बदलाव" },
+      { "id": "pillars", "type": "pillars", "enabled": true }
+    ]
+  },
+
+  "categories": {
+    "items": [
+      { "id": "ghee", "enabled": true, "label": "Ghee", "icon": "ghee", "image": "", "blurb": "Bilona churned from curd", "tint": "#F4E1C4" },
+      { "id": "atta", "enabled": true, "label": "Atta", "icon": "atta", "image": "", "blurb": "Stone ground, fibre intact", "tint": "#E9E4C9" },
+      { "id": "oils", "enabled": true, "label": "Oils", "icon": "oil", "image": "", "blurb": "Stone pressed, never heated", "tint": "#F6E6B8" },
+      { "id": "breakfast", "enabled": true, "label": "Breakfast", "icon": "breakfast", "image": "", "blurb": "High protein mornings", "tint": "#F6D9C7" },
+      { "id": "immunity", "enabled": true, "label": "Immunity", "icon": "immunity", "image": "", "blurb": "Honey & Amlaprash", "tint": "#F3D6CC" },
+      { "id": "pickles", "enabled": true, "label": "Pickles", "icon": "pickle", "image": "", "blurb": "Sun dried like Dadi’s", "tint": "#DCEBD0" },
+      { "id": "combos", "enabled": true, "label": "Combos", "icon": "combo", "image": "", "blurb": "Buy more, save more", "tint": "#EADCF0" }
+    ]
+  },
+
+  "products": {
+    "overrides": []
+  },
+
+  "search": {
+    "popular": ["A2 Ghee", "Khapli Atta", "Mustard Oil", "Honey", "Oats", "Pickle", "Nut Butter", "Combo"]
+  },
+
+  "reviews": {
+    "items": [
+      { "title": "Rich Tradition in Every Drop", "body": "Rosier Foods’ A2 Desi Cow Ghee brings the richness of tradition to my kitchen. Its pure taste elevates every dish beautifully.", "name": "Sushmita", "product": "Gir Cow A2 Ghee", "rating": 5, "photo": "" },
+      { "title": "Pure Aroma, Authentic Taste!", "body": "A2 Desi Cow Ghee from Rosier Foods gives my cooking a rich, authentic flavor. The purity and aroma are unmatched—my family loves it!", "name": "Ankush S.", "product": "Gir Cow A2 Ghee", "rating": 5, "photo": "" },
+      { "title": "Old-school fuel. Real results.", "body": "Balancing endurance sports, a demanding IT career, and family life has taught me that food needs to do more than just fill the plate.", "name": "Sumit Suhag", "product": "Gir Cow A2 Ghee", "rating": 5, "photo": "" },
+      { "title": "Healthy Choice for Everyday Meals!", "body": "Switching to Khapli Wheat Atta from Rosier Foods was the best choice for our health. It’s fresh, nutritious, and perfect for our daily meals!", "name": "Alisha A.", "product": "Khapli (Emmer) Wheat Atta", "rating": 5, "photo": "" },
+      { "title": "Taste That Feels Like Home", "body": "Using A2 Desi Cow Ghee from Rosier Foods makes my meals comforting and flavorful. The quality and purity are simply outstanding.", "name": "Himanshi S.", "product": "Gir Cow A2 Ghee", "rating": 5, "photo": "" }
+    ]
+  },
+
+  "pillars": {
+    "title": "The Rosier Foods Experience",
+    "subtitle": "असली स्वाद की एक सच्ची यात्रा",
+    "items": [
+      { "icon": "sprout", "title": "Source To Table", "body": "We work directly with our farmer families." },
+      { "icon": "pot-steam-outline", "title": "Time-Honored Techniques", "body": "Bilona, chakki and stone press. The old ways." },
+      { "icon": "water-check-outline", "title": "Unwavering Purity", "body": "Minimally processed. Lab tested." },
+      { "icon": "hand-heart-outline", "title": "Commitment to Community", "body": "Good for you, good for the planet." }
+    ]
+  },
+
+  "benefits": {
+    "bannerTitle": "ROSIER",
+    "bannerSubtitle": "BENEFITS CLUB",
+    "bannerTagline": "EXCLUSIVE BENEFITS. PREMIUM EXPERIENCE. JUST FOR YOU.",
+    "bannerPerks": [
+      { "icon": "percent-circle-outline", "label": "15%\nOff" },
+      { "icon": "truck-fast-outline", "label": "Free\nShipping" },
+      { "icon": "cake-variant-outline", "label": "Birthday\nSurprise" },
+      { "icon": "star-circle-outline", "label": "Exclusive\nRewards" },
+      { "icon": "clock-fast", "label": "Early\nAccess" }
+    ],
+    "pageTitle": "Be part of the family",
+    "pageSubtitle": "Exclusive benefits. Premium experience. Just for you.",
+    "cardFooter": "MEMBER · SINCE 2026",
+    "perks": [
+      { "icon": "percent-circle-outline", "title": "15% off", "body": "Member pricing across the store" },
+      { "icon": "truck-fast-outline", "title": "Free shipping", "body": "On every single order" },
+      { "icon": "cake-variant-outline", "title": "Birthday surprise", "body": "A little something from our kitchen" },
+      { "icon": "star-circle-outline", "title": "Exclusive rewards", "body": "Member-only drops and offers" },
+      { "icon": "clock-fast", "title": "Early access", "body": "Try new launches before anyone else" }
+    ],
+    "plansTitle": "Choose your plan",
+    "popularPlanMonths": 6,
+    "membershipHandle": "membership"
+  },
+
+  "coins": {
+    "earnPerRupee": 0.05,
+    "reviewBonus": 50,
+    "referralBonus": 500,
+    "welcomeBonus": 250,
+    "pendingDays": 7,
+    "minCartForVoucher": 499,
+    "vouchers": [
+      { "id": "v50", "value": 50, "cost": 250, "code": "ROSIERCOINS50", "tint": "copper" },
+      { "id": "v100", "value": 100, "cost": 500, "code": "ROSIERCOINS100", "tint": "brown" },
+      { "id": "v250", "value": 250, "cost": 1250, "code": "ROSIERCOINS250", "tint": "green" },
+      { "id": "v500", "value": 500, "cost": 2500, "code": "ROSIERCOINS500", "tint": "deep" }
+    ],
+    "referralMessage": "I shop A2 ghee, Khapli atta and more on the Rosier app. Join me and we both earn Rosier Coins! https://www.rosierfoods.com",
+    "steps": [
+      { "icon": "cart-outline", "title": "Shop anything", "body": "Every product shows the coins it earns you." },
+      { "icon": "timer-sand", "title": "Coins go pending", "body": "They land in your wallet as soon as you order." },
+      { "icon": "lock-open-variant-outline", "title": "They unlock", "body": "{pendingDays} days after your order, they become usable." },
+      { "icon": "ticket-percent-outline", "title": "Swap for vouchers", "body": "Pick a voucher and it applies itself at checkout." }
+    ],
+    "promoTitle": "More Coins.\nMore Benefits.",
+    "promoBody": "The more you shop, the more you earn!",
+    "promoButton": "Join Benefits Club",
+    "faq": [
+      { "q": "What are Rosier Coins?", "a": "Our way of saying thank you. You earn coins on every order and swap them for discount vouchers on your next one." },
+      { "q": "How many coins do I earn?", "a": "You earn {per100} coins for every ₹100 you spend on the final order value." },
+      { "q": "When can I use my coins?", "a": "Coins show as pending right after you order. They unlock {pendingDays} days later, once the return window is over." },
+      { "q": "How do I use them?", "a": "Unlock a voucher here or in your cart. It is applied to your checkout automatically. If you change your mind, remove it and the coins come right back." },
+      { "q": "Can I combine vouchers?", "a": "One coin voucher per order. It works alongside our regular Rosier offers." }
+    ]
+  },
+
+  "about": {
+    "heroImage": "",
+    "headline": "We are reviving the traditional ways of Old Bharat",
+    "intro": "We believe the wisdom of Old Bharat still holds the secret to wholesome living. Age-old recipes, natural cooking methods and ingredients trusted by generations, made with modern quality standards.",
+    "blocks": [
+      { "type": "text", "title": "How it started", "body": "Our journey began with a simple belief: good food brings people together. A passion for wholesome, authentic flavours grew into a mission to make food that's nourishing, sustainable and crafted with care.\n\nWe work closely with farmer families and suppliers who share our values. Every product balances traditional recipes with modern sensibilities, so every bite is rich in taste and goodness.", "signature": "", "image": "" },
+      { "type": "quote", "title": "A note from our founder", "body": "Gaurav has spent over 20 years in health and fitness, and has always been fascinated by the wisdom of ancient Indian sciences. He started Rosier to bring those traditions back to modern kitchens, beginning with milk from indigenous Gir cows.", "signature": "— Gaurav, Founder", "image": "" },
+      { "type": "text", "title": "Sustainability", "body": "Our products are minimally processed from consciously sourced ingredients. The healthy choices you make for your body should be healthy for the planet too.", "signature": "", "image": "" }
+    ],
+    "labReportsPath": "/pages/lab-test-reports",
+    "websitePath": "/pages/about-us"
+  },
+
+  "help": {
+    "title": "We'd love to hear from you",
+    "intro": "Questions about an order, a product or your coins? Reach us any way you like.",
+    "phone": "+919205658884",
+    "phoneLabel": "+91-9205658884",
+    "email": "care@rosierfoods.com",
+    "contactPath": "/pages/contact",
+    "faq": [
+      { "q": "What is A2 ghee?", "a": "Ghee made from the milk of indigenous cows like the Gir, which carries the A2 type of beta-casein protein. Ours is made from curd using the bilona method." },
+      { "q": "What does \"bilona\" mean?", "a": "Milk is set into curd overnight, then churned with a wooden churner to separate the butter. That butter is slow cooked into ghee. It takes longer, and we think it tastes better." },
+      { "q": "What is Khapli atta?", "a": "Khapli is emmer wheat, an ancient heritage grain. We stone grind it on a chakki so the bran and fibre stay in." },
+      { "q": "How do I pay?", "a": "Checkout happens securely on rosierfoods.com, with the same payment options you get on our website." },
+      { "q": "How do Rosier Coins work?", "a": "You earn {per100} coins for every ₹100. Swap them for vouchers from the Coins tab or right in your cart." },
+      { "q": "Where can I track my order?", "a": "Open Orders in the app, or log in to your account on rosierfoods.com for live tracking and invoices." }
+    ],
+    "company": "Rosier Foods Pvt. Ltd.",
+    "address": "House No. B-2994/75, Gali No. 75, B-Block Sant Nagar, Burari, North West, Delhi - 110084"
+  },
+
+  "blog": {
+    "articles": [
+      {
+        "id": "bilona",
+        "enabled": true,
+        "title": "Curd, churn, cook: how bilona ghee is made",
+        "kicker": "Tradition",
+        "mins": 3,
+        "icon": "pot-mix-outline",
+        "colors": ["#F6D98C", "#C98A52"],
+        "image": "",
+        "product": "a2-desi-cow-ghee-hand-churned-from-curd",
+        "body": "Most ghee on the shelf is made from cream or butter. Bilona ghee takes the long road.\n\nFirst, whole milk from Gir cows is boiled, cooled and set into curd overnight. Next morning, the curd is churned with a wooden bilona until the butter (makkhan) separates from the buttermilk.\n\nThat butter is then slowly cooked until the moisture leaves and what remains is golden, grainy ghee with a nutty aroma.\n\nIt takes a lot more milk and a lot more time. That is exactly why it tastes the way Dadi’s did."
+      },
+      {
+        "id": "khapli",
+        "enabled": true,
+        "title": "Khapli: the ancient wheat making a comeback",
+        "kicker": "Grains",
+        "mins": 3,
+        "icon": "grain",
+        "colors": ["#DCE7C9", "#7E9C62"],
+        "image": "",
+        "product": "khapli-emmer-wheat-atta-stoneground-high-fiber-for-gut-health",
+        "body": "Khapli, or emmer wheat, is one of the oldest cultivated grains. It was grown across India long before modern wheat varieties took over.\n\nWe stone grind it on a chakki at low speed. The flour stays cooler, and the bran and fibre stay in.\n\nRotis come out a little darker and nuttier than regular atta. Give it two or three meals, and most families don’t go back."
+      },
+      {
+        "id": "oils",
+        "enabled": true,
+        "title": "Why stone pressed oil tastes different",
+        "kicker": "Kitchen",
+        "mins": 2,
+        "icon": "bottle-tonic-outline",
+        "colors": ["#F6E6B8", "#D9A441"],
+        "image": "",
+        "product": "wood-pressed-black-mustard-oil",
+        "body": "Most refined oils are extracted with heat and chemical solvents, then bleached and deodorised.\n\nStone pressing crushes seeds slowly, at low temperature, with nothing added. The oil keeps its natural colour, aroma and flavour.\n\nThat’s why our mustard oil has its signature punch, and our groundnut oil actually smells of groundnuts."
+      },
+      {
+        "id": "coins",
+        "enabled": true,
+        "title": "Your guide to Rosier Coins",
+        "kicker": "Rewards",
+        "mins": 1,
+        "icon": "database-outline",
+        "colors": ["#F3D48B", "#9C6B1C"],
+        "image": "",
+        "product": "",
+        "body": "Every order earns you Rosier Coins. Every product page shows exactly how many.\n\nCoins show as pending first, then unlock a few days later. Once they’re in, swap them for ₹50 to ₹500 off vouchers from the Coins tab or right in your cart.\n\nChanged your mind? Remove the voucher and your coins come straight back."
+      }
+    ]
+  },
+
+  "gifting": {
+    "image": "",
+    "title": "Gift something real",
+    "body": "Our combos make thoughtful gifts for family, friends and teams. Ordering for your company?",
+    "buttonLabel": "Corporate gifting enquiry",
+    "email": "care@rosierfoods.com",
+    "subject": "Corporate gifting enquiry",
+    "category": "combos"
+  },
+
+  "announcements": {
+    "items": []
+  }
+}
