@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Dimensions, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -250,6 +250,8 @@ function FallingCoin({ i, width }: { i: number; width: number }) {
 
 export default function Onboarding() {
   const { width, height } = useWindowDimensions();
+  // On Android the window can be shorter than the screen (status / nav bar) — full-screen videos use the taller one.
+  const screenH = Platform.OS === 'android' ? Dimensions.get('screen').height : height;
   const insets = useSafeAreaInsets();
   const ob = useContent('onboarding');
   const welcomeBonus = useContent('coins').welcomeBonus;
@@ -340,13 +342,14 @@ export default function Onboarding() {
           const idx = (ob.slides as Slide[]).indexOf(s);
           return (
           <View key={s.id ?? i} style={{ width, paddingTop: insets.top + 50 }}>
-            <Editable id={`onboarding.slides.${(ob.slides as Slide[]).indexOf(s)}`} label={`Intro slide · ${s.title}`} style={{ flex: 1 }}>
+            {/* Full-screen video: edge to edge, from the very top of the screen (behind the status bar) to the bottom. */}
             {s.art === 'video_full' && !!s.video && (
-              <View style={{ position: 'absolute', top: 0, left: 0, width, height }}>
-                <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={height} muteTop={insets.top + 12} fit={z.fit} />
-                <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+              <View style={{ position: 'absolute', top: 0, left: 0, width, height: Math.max(height, screenH), overflow: 'hidden' }}>
+                <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={Math.max(height, screenH)} muteTop={insets.top + 12} fit={z.fit} />
+                <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.18, 0.45, 1]} style={StyleSheet.absoluteFill} />
               </View>
             )}
+            <Editable id={`onboarding.slides.${(ob.slides as Slide[]).indexOf(s)}`} label={`Intro slide · ${s.title}`} style={{ flex: 1 }}>
             <Editable id={`onboarding.slides.${idx}.art`} label="Picture / video area" target={`onboarding.slides.${idx}.artHeight`} base={num((s as any).artHeight, 52, 20, 90)}>
             <ArtParallax index={i} x={x} width={width} on={vibrant} style={{ height: artH, alignItems: 'center', justifyContent: 'center', transform: [{ scale: s.art === 'video' ? 1 : z.scale }] }}>
               {s.art === 'collage' && (
