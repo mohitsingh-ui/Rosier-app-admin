@@ -12,6 +12,7 @@ import { connect } from './db.js';
 import { deleteImage, listImages, MAX_VIDEO_BYTES, serveImage, storeImage } from './images.js';
 import { listProducts } from './products.js';
 import { SCHEMA, SECTION_KEYS } from './schema.js';
+import * as shopify from './shopify.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
@@ -37,6 +38,8 @@ app.use(
       },
     },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // Login opens Shopify in a popup/auth window that must be able to hand back to the app.
+    crossOriginOpenerPolicy: false,
   }),
 );
 app.use(compression());
@@ -50,6 +53,15 @@ const baseUrl = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get
 
 app.get('/healthz', (_req, res) => res.json({ ok: true, db: db.kind }));
 
+// The app (and the web preview) call these from anywhere; no cookies are involved.
+app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout'], (req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, X-Customer-Token, If-None-Match');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+});
+
 app.get(
   '/api/app/config',
   wrap(async (req, res) => {
@@ -57,17 +69,78 @@ app.get(
     res.set('Access-Control-Allow-Origin', '*');
     if (req.query.preview) {
       if (!auth.verifyPreview(String(req.query.preview))) return res.status(401).json({ error: 'Preview link expired' });
-      return res.json(await content.draftConfig(baseUrl(req)));
+      return res.json({ ...(await content.draftConfig(baseUrl(req))), shopify: await shopify.publicShopify() });
     }
     const cfg = await content.publicConfig(baseUrl(req));
-    const etag = `"v${cfg.version}"`;
+    const shop = await shopify.publicShopify();
+    const flags = `${+shop.loginEnabled}${+shop.cartCheckout}${+shop.requireLogin}`;
+    const etag = `"v${cfg.version}-${flags}"`;
     res.set('ETag', etag);
     if (req.get('If-None-Match') === etag) return res.status(304).end();
-    res.json(cfg);
+    res.json({ ...cfg, shopify: shop });
   }),
 );
 
 app.get('/img/:id', wrap(serveImage));
+
+/* ───────── Shopify customer login, orders & checkout (used by the app) ───────── */
+
+const callbackUrl = (req) => `${baseUrl(req)}/auth/shopify/callback`;
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/** A tiny page that sends people back into the app (with a button in case the jump is blocked). */
+function backToApp(res, target, ok) {
+  res.set('Cache-Control', 'no-store');
+  res.set('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+  res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rosier</title><meta http-equiv="refresh" content="0;url=${esc(target)}">
+<style>body{font-family:system-ui,sans-serif;background:#FBEBD8;color:#3E2415;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:24px}
+a{display:inline-block;margin-top:18px;background:#3E2415;color:#FBE6CF;padding:14px 26px;border-radius:28px;text-decoration:none;font-weight:600}</style></head>
+<body><div><h2>${ok ? 'You’re logged in 🎉' : 'Login didn’t finish'}</h2><p>Taking you back to the Rosier app…</p><a href="${esc(target)}">Open the Rosier app</a></div>
+<script>location.replace(${JSON.stringify(target)})</script></body></html>`);
+}
+
+app.get(
+  '/auth/shopify/start',
+  wrap(async (req, res) => {
+    const appRedirect = String(req.query.redirect || 'rosier://auth');
+    if (!shopify.allowedAppRedirect(appRedirect)) return res.status(400).send('Bad redirect');
+    try {
+      res.redirect(await shopify.startLogin(appRedirect, callbackUrl(req)));
+    } catch (e) {
+      backToApp(res, `${appRedirect}${appRedirect.includes('?') ? '&' : '?'}error=${encodeURIComponent(e.message)}`, false);
+    }
+  }),
+);
+
+app.get(
+  '/auth/shopify/callback',
+  wrap(async (req, res) => {
+    try {
+      const r = await shopify.finishLogin({ code: req.query.code, state: req.query.state }, callbackUrl(req));
+      const sep = r.appRedirect.includes('?') ? '&' : '?';
+      const err = req.query.error_description || req.query.error || r.error;
+      if (err || !r.ticket) return backToApp(res, `${r.appRedirect}${sep}error=${encodeURIComponent(String(err || 'Login failed'))}`, false);
+      backToApp(res, `${r.appRedirect}${sep}ticket=${encodeURIComponent(r.ticket)}`, true);
+    } catch (e) {
+      res.status(400).type('html').send(`<p style="font-family:sans-serif;padding:24px">${esc(e.message)} Please go back to the app and try again.</p>`);
+    }
+  }),
+);
+
+app.post('/api/auth/ticket', wrap(async (req, res) => res.json(await shopify.redeemTicket(String(req.body?.ticket || '')))));
+app.post('/api/auth/refresh', wrap(async (req, res) => res.json(await shopify.refreshLogin(String(req.body?.refreshToken || '')))));
+app.post('/api/auth/logout', wrap(async (req, res) => res.json({ url: await shopify.logoutUrl(String(req.body?.idToken || '')) })));
+app.get('/api/customer/me', wrap(async (req, res) => res.json(await shopify.customerProfile(req.get('X-Customer-Token')))));
+app.post(
+  '/api/checkout',
+  wrap(async (req, res) => {
+    const { lines, discountCode, note } = req.body || {};
+    const settings = await shopify.publicShopify();
+    if (!settings.cartCheckout) return res.status(503).json({ error: 'In-app checkout is switched off' });
+    res.json(await shopify.createCheckout({ lines, discountCode, note, customerAccessToken: req.get('X-Customer-Token') || undefined }));
+  }),
+);
 
 /* ───────── Admin API ───────── */
 
@@ -186,6 +259,29 @@ admin.get('/preview-link', (req, res) => {
   res.json({ token, link: `rosier://preview?token=${encodeURIComponent(token)}&api=${encodeURIComponent(api)}` });
 });
 
+/* Shopify connection (admin panel) */
+admin.get(
+  '/shopify/settings',
+  wrap(async (req, res) => res.json({ settings: await shopify.getSettingsForAdmin(), callbackUrl: callbackUrl(req), backendUrl: baseUrl(req) })),
+);
+admin.put('/shopify/settings', wrap(async (req, res) => res.json({ settings: await shopify.saveSettings(req.body || {}, req.admin.email) })));
+admin.post('/shopify/test/:kind', wrap(async (req, res) => res.json({ message: await shopify.testConnection(req.params.kind) })));
+admin.get('/shopify/orders', wrap(async (req, res) => res.json(await shopify.adminOrders({ search: String(req.query.search || ''), after: req.query.after || null }))));
+admin.get('/shopify/customers', wrap(async (req, res) => res.json(await shopify.adminCustomers({ search: String(req.query.search || ''), after: req.query.after || null }))));
+admin.post(
+  '/shopify/graphql',
+  wrap(async (req, res) => {
+    const { query: q, variables, api = 'admin', allowChanges = false } = req.body || {};
+    if (!q || typeof q !== 'string') return res.status(400).json({ error: 'Write a query first' });
+    if (/^\s*mutation\b/i.test(q.replace(/#.*$/gm, '')) && !allowChanges) {
+      return res.status(400).json({ error: 'This query changes data in Shopify. Tick "Allow changes" if you really mean it.' });
+    }
+    const started = Date.now();
+    const result = api === 'storefront' ? { data: await shopify.storefront(q, variables) } : await shopify.adminGraphql(q, variables);
+    res.json({ result, ms: Date.now() - started });
+  }),
+);
+
 admin.get('/admins', wrap(async (_req, res) => res.json({ admins: await auth.listAdmins() })));
 admin.post(
   '/admins',
@@ -217,6 +313,7 @@ app.use('/admin', express.static(path.resolve(here, '../admin'), { index: 'index
 app.get('/', (_req, res) => res.redirect('/admin/'));
 
 app.use((err, _req, res, _next) => {
+  if (err instanceof shopify.ShopifyError) return res.status(err.status >= 400 && err.status < 600 ? err.status : 502).json({ error: err.message });
   if (err.code === 'LIMIT_FILE_SIZE') err.message = 'That file is too big (videos up to 50 MB, images up to 15 MB).';
   const status = err.status || (err.code === 'LIMIT_FILE_SIZE' ? 413 : 400);
   if (status >= 500 || !err.message) console.error(err);

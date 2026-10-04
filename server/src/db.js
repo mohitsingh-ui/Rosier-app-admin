@@ -55,6 +55,22 @@ async function migrate(db) {
        created_at timestamptz not null default now(),
        created_by text
      )`,
+    `create table if not exists settings (
+       key text primary key,
+       value jsonb not null,
+       updated_at timestamptz not null default now(),
+       updated_by text
+     )`,
+    `create table if not exists oauth_states (
+       state text primary key,
+       data jsonb not null,
+       created_at timestamptz not null default now()
+     )`,
+    `create table if not exists auth_tickets (
+       ticket text primary key,
+       data jsonb not null,
+       created_at timestamptz not null default now()
+     )`,
     `create table if not exists images (
        id text primary key,
        name text not null default '',

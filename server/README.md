@@ -58,3 +58,17 @@ Forgot the password? In the Render shell: `npm run create-admin -- you@rosierfoo
 2. Describe the field in `server/src/schema.js`. The admin form appears automatically.
 3. Read it in the app with `useContent('<section>')`.
 4. Run `npm run sync-defaults` in `server/` so the server's copy matches.
+
+## Shopify: customer login, real orders and checkout
+
+Set up under **Shopify connection** in the admin panel. Each part has its own "How to get these keys" steps and a **Test connection** button.
+
+| Part | What it does | Keys |
+| --- | --- | --- |
+| Checkout in the app | Builds a real Shopify cart (with the coin voucher) and opens checkout. Logged-in customers get their email, addresses and saved payment methods filled in. | Storefront API public token (Headless channel) |
+| Customer login | Customers log in with their rosierfoods.com account (email + one-time code). The app shows their real orders with tracking, and gives Rosier Coins for every new order (app or website). | Customer Account API client ID + secret (Headless channel, "Confidential" client) |
+| Orders & customers in the panel | **Orders**, **Customers** and **API console** pages in the admin panel. | Admin API token (`shpat_…`) or a Dev Dashboard app's client ID + secret |
+
+Customer login needs **new customer accounts** switched on in Shopify (Settings → Customer accounts). In the Headless channel's Customer Account API settings, add the **Callback URI** shown in the panel (`https://<your-backend>/auth/shopify/callback`).
+
+Secrets stay on the server. The app only ever talks to this backend.

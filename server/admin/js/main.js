@@ -1,6 +1,7 @@
 /* Entry point: login, the app shell (sidebar + top bar), routing, publish and phone preview. */
 import { api } from './api.js';
 import { currentEditor, imagesPage, sectionPage, teamPage, versionsPage } from './pages.js';
+import { consolePage, customersPage, ordersPage, shopifyPage } from './shopify.js';
 import { openModal } from './pickers.js';
 import { changedKeys, loadContent, loadProducts, onChange, sectionDef, state } from './store.js';
 import { add, clear, fill, copyText, h, icon, relTime, toast } from './util.js';
@@ -112,6 +113,12 @@ function paintNav() {
     state.schema.map((s) => navLink(`#/section/${s.key}`, s.icon || 'file-outline', s.title, state.sections[s.key]?.changed ? h('span', { class: 'dot', title: 'Unpublished changes' }) : null)),
   );
   fill(shell.navBottom, 
+    h('p', { class: 'nav-title' }, 'Shopify'),
+    navLink('#/shopify', 'shopping-outline', 'Shopify connection'),
+    navLink('#/orders', 'package-variant-closed', 'Orders'),
+    navLink('#/customers', 'account-multiple-outline', 'Customers'),
+    navLink('#/api', 'code-braces', 'API console'),
+    h('p', { class: 'nav-title' }, 'Tools'),
     navLink('#/images', 'image-multiple-outline', 'Image library'),
     navLink('#/versions', 'history', 'Versions'),
     navLink('#/team', 'account-group-outline', 'Team & password'),
@@ -134,6 +141,10 @@ async function route() {
   if (kind === 'images') teardown = imagesPage(main);
   else if (kind === 'versions') teardown = versionsPage(main, { onRestored: () => paintNav() });
   else if (kind === 'team') teardown = teamPage(main);
+  else if (kind === 'shopify') teardown = shopifyPage(main);
+  else if (kind === 'orders') teardown = ordersPage(main);
+  else if (kind === 'customers') teardown = customersPage(main);
+  else if (kind === 'api') teardown = consolePage(main);
   else teardown = sectionPage(main, sectionDef(key) ? key : state.schema[0].key);
   paintNav();
   main.scrollTop = 0;
