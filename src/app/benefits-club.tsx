@@ -79,16 +79,16 @@ export default function BenefitsClub() {
           </View>
         )}
         <Card title={b.bannerTitle} sub={b.bannerSubtitle} footer={b.cardFooter} />
-        <Animated.Text entering={FadeInDown.delay(200)} style={{ fontFamily: fonts.serif, fontSize: 30, color: '#FBE6CF', textAlign: 'center', marginTop: 28 }}>
+        <Animated.Text entering={FadeInDown.delay(100)} style={{ fontFamily: fonts.serif, fontSize: 30, color: '#FBE6CF', textAlign: 'center', marginTop: 28 }}>
           {b.pageTitle}
         </Animated.Text>
-        <Animated.Text entering={FadeInDown.delay(300)} style={{ fontFamily: fonts.sans, fontSize: 14, color: '#C9B8A8', textAlign: 'center', marginTop: 6 }}>
+        <Animated.Text entering={FadeInDown.delay(150)} style={{ fontFamily: fonts.sans, fontSize: 14, color: '#C9B8A8', textAlign: 'center', marginTop: 6 }}>
           {b.pageSubtitle}
         </Animated.Text>
 
         <View style={{ marginTop: 24, gap: 10 }}>
           {PERKS.map(([icon, title, body], i) => (
-            <Animated.View key={`${title}-${i}`} entering={FadeInDown.delay(350 + i * 80).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(232,194,122,0.06)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(232,194,122,0.18)' }}>
+            <Animated.View key={`${title}-${i}`} entering={FadeInDown.delay(120 + Math.min(i, 6) * 35).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(232,194,122,0.06)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(232,194,122,0.18)' }}>
               <View style={{ width: 46, height: 46, borderRadius: 14, borderWidth: 1, borderColor: '#8B6230', alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name={icon} size={24} color={GOLD} />
               </View>

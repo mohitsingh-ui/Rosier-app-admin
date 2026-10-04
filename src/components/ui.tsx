@@ -136,15 +136,34 @@ export function Button({
 
 /* ───────── Product image with fade-in ───────── */
 
-export function Img({ source, size, ...rest }: { source?: string; size?: number } & Omit<ImageProps, 'source'>) {
-  let uri: string | undefined = resolveImage(source);
-  if (uri && size && uri.includes('cdn.shopify.com')) {
-    uri = `${uri}${uri.includes('?') ? '&' : '?'}width=${Math.round(size * 2)}`;
-  } else if (uri && size && /\/img\/[\w-]+$/.test(uri)) {
-    // Images uploaded in the admin panel can be resized by the backend too.
-    uri = `${uri}?w=${Math.min(2000, Math.round(size * 3))}`;
+const isShopifyCdn = (u: string) => u.includes('cdn.shopify.com') || u.includes('/cdn/shop/');
+
+/**
+ * Two fixed sizes for store photos, so the same file is reused everywhere (lists,
+ * cards, product page) and can be downloaded ahead of time — screens open instantly.
+ */
+export function sizedImage(uri: string, size: number) {
+  if (isShopifyCdn(uri)) {
+    const w = size * 2 <= 480 ? 480 : 1080;
+    const clean = uri.replace(/([?&])width=\d+&?/g, '$1').replace(/[?&]$/, '');
+    return `${clean}${clean.includes('?') ? '&' : '?'}width=${w}`;
   }
-  const props = { transition: 250, contentFit: 'contain', cachePolicy: 'memory-disk', ...rest } as ImageProps;
+  if (/\/img\/[\w-]+$/.test(uri)) return `${uri}?w=${size * 3 <= 720 ? 720 : 1600}`;
+  return uri;
+}
+
+/** Download product photos in the background (small size), so lists and pages show them at once. */
+export function prefetchImages(uris: (string | undefined)[]) {
+  const list = [...new Set(uris.filter(Boolean).map((u) => sizedImage(u as string, 200)))];
+  if (list.length) Image.prefetch(list, 'memory-disk').catch(() => {});
+}
+
+export function Img({ source, size, ...rest }: { source?: string; size?: number } & Omit<ImageProps, 'source'>) {
+  const raw = resolveImage(source);
+  const uri = raw && size ? sizedImage(raw, size) : raw;
+  // Big photos show the small (already downloaded) version first, then sharpen.
+  const placeholder = raw && size && uri !== sizedImage(raw, 200) && isShopifyCdn(raw) ? { uri: sizedImage(raw, 200) } : undefined;
+  const props = { transition: 150, contentFit: 'contain', cachePolicy: 'memory-disk', placeholder, placeholderContentFit: 'contain', ...rest } as ImageProps;
   return <Image {...props} source={uri ? { uri } : undefined} />;
 }
 

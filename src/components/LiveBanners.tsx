@@ -49,7 +49,7 @@ export function LiveTiles({ width }: { width: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 16 }}>
       {tiles.slice(0, 2).map((b, i) => (
-        <Animated.View key={b.id} entering={FadeInDown.delay(i * 100).springify()}>
+        <Animated.View key={b.id} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()}>
           <PressableScale onPress={() => openBanner(b.href)} style={{ width: w }}>
             <Image source={{ uri: resolveImage(b.image) }} style={{ width: w, height: w * L.tileRatio, borderRadius: L.tileRadius, backgroundColor: t.card }} contentFit="cover" transition={300} cachePolicy="memory-disk" />
           </PressableScale>

@@ -11,7 +11,7 @@ export default function TabsLayout() {
       <Tabs
         initialRouteName="home"
         tabBar={(props) => <TabBar {...props} />}
-        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.bg }, animation: 'shift' }}
+        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.bg }, animation: 'shift', lazy: false, freezeOnBlur: true }}
       >
         <Tabs.Screen name="profile" />
         <Tabs.Screen name="coins" />

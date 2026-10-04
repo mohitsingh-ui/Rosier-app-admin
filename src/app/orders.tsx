@@ -98,7 +98,7 @@ export default function Orders() {
               const st = trackSummary(o);
               const eta = !o.cancelled ? trackState(o).eta : null;
               return (
-                <Animated.View key={o.id} entering={FadeInDown.delay(i * 50).springify()} style={card}>
+                <Animated.View key={o.id} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()} style={card}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View>
                       <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, color: t.text }}>Order {o.name}</Text>
@@ -155,7 +155,7 @@ export default function Orders() {
           <>
             {!local.length && <EmptyState icon="cube-outline" title="No orders yet" body="Your first order is one tap away. And yes, it earns coins." cta="Shop now" onCta={() => router.navigate('/shop')} />}
             {local.map((o, i) => (
-              <Animated.View key={o.id} entering={FadeInDown.delay(i * 60).springify()} style={card}>
+              <Animated.View key={o.id} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()} style={card}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View>
                     <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, color: t.text }}>Order #{o.id}</Text>

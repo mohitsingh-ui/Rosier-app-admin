@@ -160,7 +160,7 @@ export default function ProductScreen() {
 
           {/* Info panel over the image */}
           <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, paddingBottom: 26, flexDirection: 'row', alignItems: 'flex-end' }}>
-            <Animated.View entering={FadeInUp.delay(150).springify()} style={{ flex: 1, paddingRight: 10 }}>
+            <Animated.View entering={FadeInUp.delay(75).springify()} style={{ flex: 1, paddingRight: 10 }}>
               <Text style={{ fontFamily: fonts.sansSemi, fontSize: 24, color: '#fff', lineHeight: 30 }} numberOfLines={2}>
                 {shortTitle(product.title)}
               </Text>
@@ -176,13 +176,13 @@ export default function ProductScreen() {
             <View style={{ gap: 10, alignItems: 'flex-end' }}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 {features.map((f, i) => (
-                  <Animated.View key={f.label} entering={ZoomIn.delay(250 + i * 120).springify()} style={{ width: 66, height: 66, borderRadius: 14, backgroundColor: 'rgba(22,24,30,0.88)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Animated.View key={f.label} entering={ZoomIn.delay(120 + Math.min(i, 6) * 35).springify()} style={{ width: 66, height: 66, borderRadius: 14, backgroundColor: 'rgba(22,24,30,0.88)', alignItems: 'center', justifyContent: 'center' }}>
                     <MaterialCommunityIcons name={f.icon} size={26} color="#D9844A" />
                     <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: '#E8E1DA', marginTop: 2 }}>{f.label}</Text>
                   </Animated.View>
                 ))}
               </View>
-              <Animated.View entering={FadeIn.delay(500)} style={{ backgroundColor: 'rgba(22,24,30,0.88)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, width: 142 }}>
+              <Animated.View entering={FadeIn.delay(160)} style={{ backgroundColor: 'rgba(22,24,30,0.88)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, width: 142 }}>
                 <Text style={{ fontFamily: fonts.sans, fontSize: 11.5, color: '#E8E1DA', textAlign: 'center' }}>{TAGLINE[product.category] ?? 'असली स्वाद'}</Text>
               </Animated.View>
             </View>
@@ -328,7 +328,7 @@ export default function ProductScreen() {
       </View>
 
       {/* Sticky buy bar */}
-      <Animated.View entering={FadeInUp.delay(200).springify()} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.cardStrong, paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 12, flexDirection: 'row', alignItems: 'center', gap: 16, borderTopWidth: 1, borderColor: t.border }}>
+      <Animated.View entering={FadeInUp.delay(100).springify()} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.cardStrong, paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 12, flexDirection: 'row', alignItems: 'center', gap: 16, borderTopWidth: 1, borderColor: t.border }}>
         <View>
           <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: t.textMute }}>Price</Text>
           <Animated.Text key={variant.id} entering={FadeInDown.springify()} style={{ fontFamily: fonts.serifBold, fontSize: 28, color: t.text }}>

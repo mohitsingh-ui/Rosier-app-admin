@@ -29,7 +29,7 @@ export default function Help() {
         </Txt>
         <View style={{ gap: 10, marginTop: 18 }}>
           {actions.map((a, i) => (
-            <Animated.View key={a.label} entering={FadeInDown.delay(i * 70).springify()}>
+            <Animated.View key={a.label} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()}>
               <PressableScale onPress={a.go} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: t.cardStrong, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: t.border }}>
                 <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
                   <MaterialCommunityIcons name={a.icon} size={22} color={t.primary} />

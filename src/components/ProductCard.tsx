@@ -36,7 +36,7 @@ export const DealCard = React.memo(function DealCard({ product, index = 0, width
   const add = useCart((s) => s.add);
   const imgRef = useRef<View>(null);
   return (
-    <Animated.View entering={FadeInDown.delay(80 * index).springify().damping(14)}>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 30).springify().damping(14)}>
       <PressableScale onPress={() => openProduct(product)} style={{ width, backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 2), padding: 10 }}>
         <View ref={imgRef} collapsable={false} style={{ height: width * L.productImageRatio * 1.05, alignItems: 'center', justifyContent: 'center' }}>
           <Img source={product.images[0]} size={width} style={{ width: '100%', height: '100%' }} />
@@ -90,7 +90,7 @@ export const GridCard = React.memo(function GridCard({ product, index = 0, width
   const imgRef = useRef<View>(null);
 
   return (
-    <Animated.View entering={FadeInDown.delay(60 * (index % 6)).springify().damping(15)} style={{ width }}>
+    <Animated.View entering={FadeInDown.delay(30 * (index % 6)).springify().damping(15)} style={{ width }}>
       <PressableScale scaleTo={0.97} onPress={() => openProduct(product)} style={[{ backgroundColor: t.cardStrong, borderRadius: L.cardRadius, padding: 8, borderWidth: 1, borderColor: t.border }, styles.shadow]}>
         <View ref={imgRef} collapsable={false} style={{ backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 6), height: width * L.productImageRatio, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <Img source={product.images[0]} size={width} style={{ width: '92%', height: '92%' }} />

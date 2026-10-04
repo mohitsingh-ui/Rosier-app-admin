@@ -60,7 +60,7 @@ export default function CoinHistory() {
         renderItem={({ item, index }) => {
           const m = META[item.kind];
           return (
-            <Animated.View entering={FadeInDown.delay(index * 40)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.cardStrong, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: t.border }}>
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 35)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.cardStrong, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: t.border }}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name={m.icon} size={20} color={m.tint} />
               </View>

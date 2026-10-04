@@ -12,6 +12,8 @@ import { openStorePage } from '../../lib/cart';
 import { tap } from '../../lib/haptics';
 import { isLive, useContent } from '../../config/remote';
 import { useMembership } from '../../lib/membership';
+import { registerPush, usePushState } from '../../lib/push';
+import { Linking, Platform } from 'react-native';
 import { useApp } from '../../store/app';
 import { signOut, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
@@ -43,6 +45,40 @@ function EffectsSwitch() {
         trackColor={{ true: t.primary, false: t.border }}
         thumbColor="#fff"
       />
+    </View>
+  );
+}
+
+/** Are phone notifications working here? One tap to fix. */
+function NotifyRow() {
+  const t = useTheme();
+  const st = usePushState();
+  if (Platform.OS === 'web') return null;
+  const on = st.mode === 'push' || st.mode === 'background';
+  const label = st.mode === 'push' ? 'On' : st.mode === 'background' ? 'On (checks every ~15 min)' : st.mode === 'denied' ? 'Blocked in phone settings' : 'Off';
+  return (
+    <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.card, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }}>
+      <MaterialCommunityIcons name={on ? 'bell-ring-outline' : 'bell-off-outline'} size={20} color={on ? t.green : t.primary} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, color: t.text }}>Notifications: {label}</Text>
+        {!!st.detail && st.mode !== 'push' && (
+          <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: t.textMute }} numberOfLines={2}>
+            {st.detail}
+          </Text>
+        )}
+      </View>
+      {!on && (
+        <Pressable
+          onPress={async () => {
+            tap();
+            if (st.mode === 'denied') return Linking.openSettings();
+            await registerPush(true);
+          }}
+          style={{ backgroundColor: t.deepAlt, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
+        >
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12.5, color: '#FBE6CF' }}>{st.mode === 'denied' ? 'Open settings' : 'Turn on'}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -183,13 +219,14 @@ export default function Profile() {
       </Txt>
       <ThemeSwitch />
       <EffectsSwitch />
+      <NotifyRow />
 
       <Txt v="label" color={t.textMute} style={{ marginTop: 24, marginBottom: 6 }}>
         Your account
       </Txt>
       <View style={{ backgroundColor: t.cardStrong, borderRadius: 20, borderWidth: 1, borderColor: t.border, overflow: 'hidden' }}>
         {rows.map((r, i) => (
-          <Animated.View key={r.label} entering={FadeInDown.delay(i * 40)}>
+          <Animated.View key={r.label} entering={FadeInDown.delay(Math.min(i, 6) * 35)}>
             <Pressable
               onPress={() => {
                 tap();

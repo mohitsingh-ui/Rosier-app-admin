@@ -84,7 +84,7 @@ export function CouponBox({ check, subtotal }: { check: CouponCheck | null; subt
 
   return (
     <Editable id="coupons" label="Coupons">
-      <Animated.View entering={FadeInDown.delay(120)} layout={LinearTransition} style={{ marginTop: 16, backgroundColor: t.cardStrong, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: t.border }}>
+      <Animated.View entering={FadeInDown.delay(60)} layout={LinearTransition} style={{ marginTop: 16, backgroundColor: t.cardStrong, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: t.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <MaterialCommunityIcons name="ticket-percent-outline" size={20} color={t.primary} />
           <Text style={{ flex: 1, fontFamily: fonts.serif, fontSize: 18, color: t.heading }}>{cfg.boxTitle}</Text>

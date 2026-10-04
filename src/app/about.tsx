@@ -44,7 +44,7 @@ export default function About() {
         <View style={{ paddingHorizontal: 20 }}>
           {about.blocks.map((b, i) =>
             b.type === 'quote' ? (
-              <Animated.View key={i} entering={FadeInDown.delay(200)} style={{ marginTop: 24, backgroundColor: t.card, borderRadius: 22, padding: 18 }}>
+              <Animated.View key={i} entering={FadeInDown.delay(100)} style={{ marginTop: 24, backgroundColor: t.card, borderRadius: 22, padding: 18 }}>
                 {!!b.image && <Img source={b.image} size={300} style={{ width: '100%', height: 180, borderRadius: 16, marginBottom: 12 }} contentFit="cover" />}
                 <MaterialCommunityIcons name="format-quote-open" size={30} color={t.gold} />
                 <Txt v="h3" style={{ marginTop: 4 }}>

@@ -18,7 +18,7 @@ export default function Account() {
   const [email, setEmail] = useState(app.email);
 
   const field = (label: string, value: string, set: (s: string) => void, props: object = {}, i = 0) => (
-    <Animated.View entering={FadeInDown.delay(i * 70).springify()} style={{ marginTop: 16 }}>
+    <Animated.View entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()} style={{ marginTop: 16 }}>
       <Text style={{ fontFamily: fonts.sansMedium, fontSize: 13, color: t.textSoft, marginBottom: 6 }}>{label}</Text>
       <TextInput
         value={value}

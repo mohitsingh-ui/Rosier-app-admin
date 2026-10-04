@@ -25,6 +25,8 @@ import { reportRoute, startEditorBridge } from '../lib/editorBridge';
 import { startNotifications, startUsagePings, syncPush } from '../lib/push';
 import { useAuth } from '../store/auth';
 import { ToastHost } from '../components/Toast';
+import { prefetchImages } from '../components/ui';
+import { Image as ExpoImage } from 'expo-image';
 import { useBanners } from '../data/banners';
 import { useCatalog } from '../data/catalog';
 import { useApp } from '../store/app';
@@ -92,8 +94,14 @@ export default function RootLayout() {
   useEffect(() => {
     if (!hydrated) return;
     (async () => {
-      useCatalog.getState().refresh();
-      useBanners.getState().refresh();
+      // Photos from last time are already cached; fetch fresh data and pre-download photos.
+      prefetchImages(useCatalog.getState().products.slice(0, 60).map((p) => p.images[0]));
+      useCatalog.getState().refresh().then(() => prefetchImages(useCatalog.getState().products.slice(0, 80).map((p) => p.images[0])));
+      useBanners.getState().refresh().then(() => {
+        const b = useBanners.getState();
+        const urls = [...b.slides, ...b.tiles].map((x) => x.image).filter(Boolean);
+        if (urls.length) ExpoImage.prefetch(urls, 'memory-disk').catch(() => {});
+      });
       // Get the latest content from the admin panel (don't wait more than 4s).
       await withTimeout(useRemote.getState().refresh(), 4000);
       const firstLaunch = !useCoins.getState().initialised;

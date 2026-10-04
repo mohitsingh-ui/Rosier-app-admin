@@ -22,7 +22,7 @@ export default function Notifications() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         {!items.length && <EmptyState icon="notifications-outline" title="All caught up" body="Offers, order updates and coin credits will show up here." />}
         {items.map((n, i) => (
-          <Animated.View key={n.id} entering={FadeInDown.delay(i * 50).springify()}>
+          <Animated.View key={n.id} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()}>
           <PressableScale scaleTo={n.link ? 0.97 : 1} haptic={!!n.link} onPress={() => n.link && openLink(n.link)} style={{ flexDirection: 'row', gap: 12, backgroundColor: n.read ? t.cardStrong : t.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: t.border }}>
             <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.cardStrong, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="bell-ring-outline" size={20} color={t.primary} />

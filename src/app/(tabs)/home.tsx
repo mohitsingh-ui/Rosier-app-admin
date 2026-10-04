@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +46,11 @@ export default function Home() {
   const openMenu = useApp((s) => s.setMenuOpen);
   const balance = useCoins((s) => s.balance);
   const [tab, setTab] = useState<string | null>(null);
+  const [fullHome, setFullHome] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTimeout(() => setFullHome(true), 60));
+    return () => cancelAnimationFrame(id);
+  }, []);
   const liveSlides = useBanners((s) => s.slides);
   const bannerAspect = useBanners((s) => s.aspect);
   const refreshBanners = useBanners((s) => s.refresh);
@@ -196,7 +201,7 @@ export default function Home() {
               const fg = tb.textColor || (tb.kind === 'logo' ? (t.mode === 'dark' ? '#E8C27A' : '#3E2415') : t.text);
               return (
                 <Editable key={tb.id || i} id={`home.quickTabs.${i}`} label={`Tab · ${String(tb.label || tb.kind).replace(/\n/g, ' ')}`}>
-                  <Animated.View entering={FadeInDown.delay(i * 60)} style={hidden ? { opacity: 0.35 } : undefined}>
+                  <Animated.View entering={FadeInDown.delay(Math.min(i, 6) * 35)} style={hidden ? { opacity: 0.35 } : undefined}>
                     <PressableScale
                       onPress={() => onTopTab(tb.id, tb.link)}
                       style={{ width: w, height: h, borderRadius: 10, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, backgroundColor: tb.bgColor || (active ? t.card : t.cardStrong), borderWidth: 1, borderColor: tb.borderColor || t.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, overflow: 'hidden' }}
@@ -276,6 +281,8 @@ export default function Home() {
         </Editable>
 
         {home.sections.map((sec: any, si) => {
+          // Sections further down render a moment later so the screen appears instantly.
+          if (si >= 3 && !fullHome && !inEditor) return null;
           if (sec.enabled === false) {
             // Hidden sections show as a thin bar in the admin preview so they can be switched back on.
             return inEditor ? (
@@ -296,7 +303,7 @@ export default function Home() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}>
                     {categories.map((c, i) => (
                       <Editable key={c.id} id={`categories.items.${catIndex(c.id)}`} label={`Category · ${c.label}`} target="theme.layout.categoryTile" base={L.categoryTile}>
-                      <Animated.View entering={FadeInDown.delay(i * 70).springify()}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()}>
                         <PressableScale onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })} style={{ alignItems: 'center', width: L.categoryTile + 4 }}>
                           <View style={{ width: L.categoryTile, height: Math.round(L.categoryTile * 0.89), borderRadius: 12, backgroundColor: t.mode === 'dark' ? t.card : '#F4E3CF', alignItems: 'center', justifyContent: 'center' }}>
                             <CategoryIcon name={c.icon} image={c.image} size={L.categoryIcon} color={t.mode === 'dark' ? '#D8A15A' : '#7E3F18'} />
@@ -381,7 +388,7 @@ export default function Home() {
                         {!!img &&
                           [0, 1, 2].map((k) => (
                             <View key={k} style={{ width: 70, height: 100, marginLeft: k ? -18 : 0, transform: [{ rotate: `${(k - 1) * 6}deg` }] }}>
-                              <Animated.Image entering={FadeInDown.delay(k * 120)} source={{ uri: img }} style={{ width: '100%', height: '100%', borderRadius: 10 }} resizeMode="contain" />
+                              <Animated.Image entering={FadeInDown.delay(Math.min(k, 6) * 35)} source={{ uri: img }} style={{ width: '100%', height: '100%', borderRadius: 10 }} resizeMode="contain" />
                             </View>
                           ))}
                       </View>

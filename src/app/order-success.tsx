@@ -25,14 +25,14 @@ export default function OrderSuccess() {
       <Animated.View entering={ZoomIn.springify().damping(10)}>
         <Coin size={120} spin shine />
       </Animated.View>
-      <Animated.Text entering={FadeInDown.delay(300)} style={{ fontFamily: fonts.serifBold, fontSize: 30, color: t.heading, marginTop: 24, textAlign: 'center' }}>
+      <Animated.Text entering={FadeInDown.delay(150)} style={{ fontFamily: fonts.serifBold, fontSize: 30, color: t.heading, marginTop: 24, textAlign: 'center' }}>
         Dhanyavaad! 🙏
       </Animated.Text>
-      <Animated.Text entering={FadeInDown.delay(420)} style={{ fontFamily: fonts.sans, fontSize: 15, color: t.textSoft, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+      <Animated.Text entering={FadeInDown.delay(160)} style={{ fontFamily: fonts.sans, fontSize: 15, color: t.textSoft, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
         Order #{id} is with our kitchen now.{'\n'}
         {order ? `${order.coins} Rosier Coins` : coins ? `${coins} Rosier Coins` : 'Your coins'} will unlock in {COINS.pendingDays} days.
       </Animated.Text>
-      <Animated.View entering={FadeInDown.delay(560)} style={{ alignSelf: 'stretch', marginTop: 30, gap: 10 }}>
+      <Animated.View entering={FadeInDown.delay(160)} style={{ alignSelf: 'stretch', marginTop: 30, gap: 10 }}>
         <Button label="View my coins" onPress={() => router.replace('/coins')} />
         <Button label="Continue shopping" kind="ghost" onPress={() => router.replace('/home')} />
       </Animated.View>

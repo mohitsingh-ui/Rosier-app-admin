@@ -147,7 +147,7 @@ export default function Coins() {
             { title: 'Earn Coins', sub: 'Ways to earn more', icon: 'arrow-up-bold-box-outline', bg: t.card, fg: t.text, y: earnY },
             { title: 'Redeem Coins', sub: 'Swap for vouchers', icon: 'gift-outline', bg: t.greenSoft, fg: t.green, y: redeemY },
           ].map((c, i) => (
-            <Animated.View key={c.title} entering={FadeInDown.delay(100 + i * 80).springify()} style={{ flex: 1 }}>
+            <Animated.View key={c.title} entering={FadeInDown.delay(50 + Math.min(i, 6) * 35).springify()} style={{ flex: 1 }}>
               <PressableScale onPress={() => scroll.current?.scrollTo({ y: c.y - 10, animated: true })} style={{ backgroundColor: c.bg, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.cardStrong, alignItems: 'center', justifyContent: 'center' }}>
                   <MaterialCommunityIcons name={c.icon as any} size={20} color={t.primary} />
@@ -177,7 +177,7 @@ export default function Coins() {
                 go: () => Share.share({ message: cc.referralMessage }),
               },
             ].map((c, i) => (
-              <Animated.View key={c.title} entering={FadeInDown.delay(150 + i * 90).springify()} style={{ flex: 1 }}>
+              <Animated.View key={c.title} entering={FadeInDown.delay(75 + Math.min(i, 6) * 35).springify()} style={{ flex: 1 }}>
                 <PressableScale onPress={c.go} style={{ backgroundColor: t.cardStrong, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 8, alignItems: 'center', borderWidth: 1, borderColor: t.border, minHeight: 170 }}>
                   <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
                     <MaterialCommunityIcons name={c.icon as any} size={28} color="#B8862E" />
@@ -199,7 +199,7 @@ export default function Coins() {
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {COINS.vouchers.map((v, i) => (
-            <Animated.View key={v.id} entering={ZoomIn.delay(200 + i * 90).springify()}>
+            <Animated.View key={v.id} entering={ZoomIn.delay(100 + Math.min(i, 6) * 35).springify()}>
               <Ticket v={v} active={voucherId === v.id} onPress={() => setPick(v)} />
             </Animated.View>
           ))}
@@ -210,7 +210,7 @@ export default function Coins() {
           How Rosier Coins work
         </Txt>
         {cc.steps.map((st) => [st.icon, st.title, fill(st.body)]).map(([icon, title, body], i, arr) => (
-          <Animated.View key={`${title}-${i}`} entering={FadeInDown.delay(i * 100)} style={{ flexDirection: 'row', gap: 14 }}>
+          <Animated.View key={`${title}-${i}`} entering={FadeInDown.delay(Math.min(i, 6) * 35)} style={{ flexDirection: 'row', gap: 14 }}>
             <View style={{ alignItems: 'center' }}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.deepAlt, alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name={icon as any} size={20} color="#F3D48B" />

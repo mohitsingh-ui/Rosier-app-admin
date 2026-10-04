@@ -90,7 +90,7 @@ export function PushAsk() {
   if (IN_EDITOR || asked || !cfg.enabled || state !== 'undetermined') return null;
   const done = () => useApp.setState({ pushAsked: true });
   return (
-    <Animated.View entering={FadeInDown.delay(400).springify()} exiting={FadeOut} style={{ marginHorizontal: 20, marginTop: 14, backgroundColor: t.cardStrong, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: t.border, flexDirection: 'row', gap: 12 }}>
+    <Animated.View entering={FadeInDown.delay(160).springify()} exiting={FadeOut} style={{ marginHorizontal: 20, marginTop: 14, backgroundColor: t.cardStrong, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: t.border, flexDirection: 'row', gap: 12 }}>
       <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
         <MaterialCommunityIcons name="bell-ring-outline" size={24} color={t.primary} />
       </View>

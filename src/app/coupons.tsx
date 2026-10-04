@@ -57,7 +57,7 @@ export default function Coupons() {
           <EmptyState icon="pricetags-outline" title="No offers right now" body="Have a code? Type it above and we'll apply it at checkout." />
         ) : (
           list.map((c, i) => (
-            <Animated.View key={c.id || c.code} entering={FadeInDown.delay(i * 50)}>
+            <Animated.View key={c.id || c.code} entering={FadeInDown.delay(Math.min(i, 6) * 35)}>
               <CouponCard wide c={c} subtotal={sum.lines.length ? sum.subtotal - sum.voucherValue : undefined} applied={!!code && code.toLowerCase() === c.code.toLowerCase()} onApply={() => use(c.code)} />
             </Animated.View>
           ))

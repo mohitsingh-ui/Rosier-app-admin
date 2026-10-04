@@ -33,6 +33,8 @@ import { fill, useContent } from '../config/remote';
 import { success, tap } from '../lib/haptics';
 import { useApp } from '../store/app';
 import { fonts } from '../theme';
+import { Aurora, GlowRing, paletteFor, Sparkles, WordReveal } from '../components/IntroFx';
+import { Layer as Burst } from '../components/SeasonalEffects';
 
 const ORANGE = '#B8662F';
 
@@ -194,7 +196,7 @@ function Steps({ chips, accent }: { chips: Slide['chips']; accent: string }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, flexWrap: 'wrap', marginTop: 18 }}>
       {steps.map(([icon, label], i) => (
-        <Animated.View key={`${label}-${i}`} entering={FadeInDown.delay(250 + i * 140).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
+        <Animated.View key={`${label}-${i}`} entering={FadeInDown.delay(120 + Math.min(i, 6) * 35).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
           {!!icon && <MaterialCommunityIcons name={icon as any} size={13} color={accent} />}
           <Text style={{ fontFamily: fonts.sansMedium, fontSize: 11, color: '#5A3A1E' }}>{label}</Text>
           {i < steps.length - 1 && <Ionicons name="chevron-forward" size={11} color="#C98B55" />}
@@ -263,6 +265,9 @@ export default function Onboarding() {
   const input = useRef<TextInput>(null);
 
   const setIntroVersion = useApp((s) => s.setIntroVersion);
+  const vibrant = ob.vibrant !== false;
+  const palettes = SLIDES.map((s, i) => paletteFor((s as any).colors, i));
+  const [celebrate, setCelebrate] = useState(false);
 
   const onScroll = useAnimatedScrollHandler((e) => {
     x.value = e.contentOffset.x;
@@ -274,6 +279,17 @@ export default function Onboarding() {
   }, []);
 
   const finish = () => {
+    if (vibrant && !celebrate && SLIDES.length) {
+      // A quick confetti burst, then into the app.
+      setCelebrate(true);
+      success();
+      setTimeout(done, 850);
+      return;
+    }
+    done();
+  };
+
+  const done = () => {
     success();
     if (name.trim()) setProfile({ name: name.trim() });
     setIntroVersion(Number(ob.reshowVersion) || 1);
@@ -295,6 +311,8 @@ export default function Onboarding() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: BG }}>
+      {vibrant && <Aurora x={x} width={width} height={height} palettes={palettes} />}
+      {vibrant && <Sparkles width={width} height={height} />}
       <Sprig />
       <Animated.ScrollView
         ref={scrollRef}
@@ -315,7 +333,7 @@ export default function Onboarding() {
                 <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
               </View>
             )}
-            <View pointerEvents="box-none" style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>
+            <ArtParallax index={i} x={x} width={width} on={vibrant} style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>
               {s.art === 'collage' && (
                 <View style={{ width, height: artH }}>
                   {(s.images ?? []).slice(0, COLLAGE.length).map((uri, k) => (
@@ -331,11 +349,11 @@ export default function Onboarding() {
                   <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} radius={28} w={frameW} h={frameW * (16 / 9)} />
                 </Animated.View>
               )}
-            </View>
-            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={accent} light={s.art === 'video_full' && !!s.video} />
+            </ArtParallax>
+            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={accent} light={s.art === 'video_full' && !!s.video} active={vibrant && page === i} />
             {!!s.chips?.length && page === i && <Steps chips={s.chips} accent={accent} />}
             {!!s.showNameInput && (
-              <Animated.View entering={FadeIn.delay(200)} style={{ paddingHorizontal: 28, marginTop: 16 }}>
+              <Animated.View entering={FadeIn.delay(100)} style={{ paddingHorizontal: 28, marginTop: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Avatar size={56} editable />
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 16, paddingHorizontal: 14, height: 50, gap: 8 }}>
@@ -374,13 +392,41 @@ export default function Onboarding() {
             <Text style={{ fontFamily: fonts.sansMedium, color: SLIDES[page]?.art === 'video_full' ? '#FFFFFF' : '#8B7B6E', fontSize: 15 }}>{ob.skipLabel}</Text>
           </Pressable>
         )}
-        <NextButton last={page >= SLIDES.length - 1} label={ob.buttonLabel} onPress={next} />
+        <View>
+          {vibrant && <GlowRing color={palettes[page]?.[1] ?? accent} size={page >= SLIDES.length - 1 ? 150 : 56} last={page >= SLIDES.length - 1} />}
+          <NextButton last={page >= SLIDES.length - 1} label={ob.buttonLabel} onPress={next} />
+        </View>
       </View>
+      {celebrate && (
+        <Burst effect={{ id: 'intro', enabled: true, name: 'intro', type: 'confetti', amount: 70, speed: 1.7, size: 1.15, opacity: 1, colors: palettes.flatMap((p) => p.slice(1)), emoji: '', image: '', screens: 'all', stopAfter: 2, startAt: '', endAt: '' }} />
+      )}
     </KeyboardAvoidingView>
   );
 }
 
-function SlideText({ index, x, width, title, sub, logo, accent, light }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean }) {
+/** The slide's picture area: drifts, tilts and shrinks as you swipe (3D-ish parallax). */
+function ArtParallax({ index, x, width, on, style, children }: { index: number; x: SharedValue<number>; width: number; on: boolean; style: any; children: React.ReactNode }) {
+  const a = useAnimatedStyle(() => {
+    if (!on) return {};
+    const p = (x.value - index * width) / width;
+    return {
+      opacity: interpolate(Math.abs(p), [0, 0.9], [1, 0.2], Extrapolation.CLAMP),
+      transform: [
+        { perspective: 900 },
+        { translateX: interpolate(p, [-1, 0, 1], [width * 0.25, 0, -width * 0.25]) },
+        { rotateY: `${interpolate(p, [-1, 0, 1], [-25, 0, 25])}deg` },
+        { scale: interpolate(Math.abs(p), [0, 1], [1, 0.82], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+  return (
+    <Animated.View pointerEvents="box-none" style={[style, a]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function SlideText({ index, x, width, title, sub, logo, accent, light, active }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean; active?: boolean }) {
   const a = useAnimatedStyle(() => {
     const p = (x.value - index * width) / width;
     return {
@@ -395,7 +441,7 @@ function SlideText({ index, x, width, title, sub, logo, accent, light }: { index
           <RosierLogo width={110} color={light ? '#FFFFFF' : '#5A3520'} />
         </View>
       )}
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 34, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }}>{title}</Text>
+      <WordReveal text={title} active={!!active} style={{ fontFamily: fonts.sansSemi, fontSize: 34, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }} />
       <Text style={{ fontFamily: fonts.sans, fontSize: 15, color: light ? 'rgba(255,255,255,0.9)' : '#7A6453', marginTop: 4, lineHeight: 22 }}>{sub}</Text>
     </Animated.View>
   );
@@ -419,7 +465,7 @@ function NextButton({ last, label, onPress }: { last: boolean; label: string; on
     <Pressable onPress={onPress}>
       <Animated.View style={[{ height: 56, borderRadius: 28, backgroundColor: '#3E2415', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, overflow: 'hidden' }, a]}>
         {last && (
-          <Animated.Text entering={FadeIn.delay(150)} style={{ color: '#FBE6CF', fontFamily: fonts.sansSemi, fontSize: 15 }} numberOfLines={1}>
+          <Animated.Text entering={FadeIn.delay(75)} style={{ color: '#FBE6CF', fontFamily: fonts.sansSemi, fontSize: 15 }} numberOfLines={1}>
             {label}
           </Animated.Text>
         )}

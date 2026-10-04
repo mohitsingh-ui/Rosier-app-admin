@@ -72,7 +72,7 @@ export default function Search() {
           renderItem={({ item, index }) => {
             const v = defaultVariant(item);
             return (
-              <Animated.View entering={FadeInDown.delay(index * 35)}>
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 35)}>
                 <Pressable onPress={() => openProduct(item)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.cardStrong, borderRadius: 16, padding: 10, borderWidth: 1, borderColor: t.border }}>
                   <Img source={item.images[0]} size={60} style={{ width: 60, height: 60, borderRadius: 10 }} />
                   <View style={{ flex: 1 }}>

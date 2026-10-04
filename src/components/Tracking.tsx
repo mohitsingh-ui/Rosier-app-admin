@@ -163,7 +163,7 @@ export function TrackingView({ order }: { order: TrackOrder }) {
         .map((s, i) => {
           const link = courierLink(s, cfg.websiteTrackUrl || '');
           return (
-            <Animated.View key={i} entering={FadeInDown.delay(100).springify()} style={card}>
+            <Animated.View key={i} entering={FadeInDown.delay(50).springify()} style={card}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
                   <MaterialCommunityIcons name="truck-fast-outline" size={22} color={t.primary} />
@@ -184,7 +184,7 @@ export function TrackingView({ order }: { order: TrackOrder }) {
 
       {/* Courier history */}
       {history.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(140).springify()} style={card}>
+        <Animated.View entering={FadeInDown.delay(70).springify()} style={card}>
           <Text style={{ fontFamily: fonts.serif, fontSize: 17, color: t.heading, marginBottom: 8 }}>Shipment updates</Text>
           {history.map((e, i) => (
             <View key={i} style={{ flexDirection: 'row', gap: 10, paddingVertical: 6, borderTopWidth: i ? 1 : 0, borderColor: t.border }}>
@@ -198,7 +198,7 @@ export function TrackingView({ order }: { order: TrackOrder }) {
 
       {/* Items & address */}
       {(order.items?.length || order.address) && (
-        <Animated.View entering={FadeInDown.delay(180).springify()} style={card}>
+        <Animated.View entering={FadeInDown.delay(90).springify()} style={card}>
           {(order.items ?? []).map((it, k) => (
             <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <Img source={it.image} size={44} style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: t.card }} />

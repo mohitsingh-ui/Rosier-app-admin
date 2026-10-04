@@ -12,7 +12,7 @@ export function Reviews() {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }} snapToInterval={272} decelerationRate="fast">
       {REVIEWS.map((r, i) => (
-        <Animated.View key={`${r.name}-${i}`} entering={FadeInRight.delay(i * 90).springify()} style={{ width: 260, backgroundColor: t.cardStrong, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: t.border }}>
+        <Animated.View key={`${r.name}-${i}`} entering={FadeInRight.delay(Math.min(i, 6) * 35).springify()} style={{ width: 260, backgroundColor: t.cardStrong, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: t.border }}>
           <MaterialCommunityIcons name="format-quote-open" size={28} color={t.gold} />
           <Text style={{ fontFamily: fonts.serif, fontSize: 16, color: t.heading, marginTop: 2 }}>{r.title}</Text>
           <Text style={{ fontFamily: fonts.sans, fontSize: 12.5, color: t.textSoft, marginTop: 6, lineHeight: 19 }} numberOfLines={5}>

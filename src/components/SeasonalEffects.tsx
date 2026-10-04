@@ -172,7 +172,7 @@ const Particle = memo(function Particle({ p, clock, fade, w, h, image }: { p: P;
   return <Animated.View style={[styles.p, style]}>{body}</Animated.View>;
 });
 
-function Layer({ effect }: { effect: Effect }) {
+export function Layer({ effect }: { effect: Effect }) {
   const { width: w, height: h } = useWindowDimensions();
   const particles = useMemo(() => makeParticles(effect, w, h), [effect, w, h]);
   const clock = useSharedValue(0);

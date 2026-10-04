@@ -26,7 +26,7 @@ export default function Blog() {
       <ScreenHeader title="Blog & Articles" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}>
         {ARTICLES.map((a, i) => (
-          <Animated.View key={a.id} entering={FadeInDown.delay(i * 80).springify()}>
+          <Animated.View key={a.id} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()}>
             <Pressable onPress={() => setOpen(a)} style={{ backgroundColor: t.cardStrong, borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: t.border }}>
               {a.image ? (
                 <Img source={a.image} size={400} style={{ height: 160, width: '100%' }} contentFit="cover" />
@@ -66,7 +66,7 @@ export default function Blog() {
               <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: insets.bottom + 24 }}>
                 <Text style={{ fontFamily: fonts.serifBold, fontSize: 26, color: t.heading, lineHeight: 32 }}>{open.title}</Text>
                 {paras(open.body).map((p, i) => (
-                  <Animated.Text key={i} entering={FadeInDown.delay(100 + i * 80)} style={{ fontFamily: fonts.sans, fontSize: 15.5, color: t.text, lineHeight: 25, marginTop: 12 }}>
+                  <Animated.Text key={i} entering={FadeInDown.delay(50 + Math.min(i, 6) * 35)} style={{ fontFamily: fonts.sans, fontSize: 15.5, color: t.text, lineHeight: 25, marginTop: 12 }}>
                     {p}
                   </Animated.Text>
                 ))}

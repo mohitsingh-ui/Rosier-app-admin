@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition, ZoomIn } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Coin } from '../../components/Coin';
 import { CouponBox } from '../../components/CouponBox';
+import { GiftLines, RewardsBar, useRewards } from '../../components/Rewards';
 import { SwipeRow } from '../../components/SwipeRow';
 import { toast } from '../../components/Toast';
 import { Button, CountUp, EmptyState, Img, PressableScale, QtyStepper, Txt } from '../../components/ui';
@@ -122,6 +123,8 @@ export default function Cart() {
   const memberSaving = memberPct ? Math.round(((sum.total - couponSaving) * memberPct) / 100) : 0;
   const toPay = Math.max(0, sum.total - couponSaving - memberSaving);
   const coinsEarned = couponSaving || memberSaving ? coinsForAmount(Math.max(0, sum.subtotal - sum.voucherValue - couponSaving - memberSaving)) : sum.coins;
+  // Website-style rewards: free gifts added automatically above a cart amount.
+  const rewards = useRewards(sum.subtotal);
   const codes = [sum.voucherOk ? sum.voucher!.code : '', couponUsable ? couponCode! : ''].filter(Boolean);
 
   const checkout = async (skipLoginPrompt = false) => {
@@ -133,7 +136,7 @@ export default function Cart() {
     success();
     const before = new Set((useAuth.getState().customer?.orders ?? []).map((o) => o.id));
     const r = await openCheckout(
-      sum.selected.map((l) => ({ variantId: l.variantId, qty: l.qty })),
+      [...sum.selected.map((l) => ({ variantId: l.variantId, qty: l.qty })), ...rewards.gifts.map((g) => ({ variantId: g.variantId, qty: g.qty }))],
       codes,
     );
     if (r.inApp) {
@@ -247,16 +250,20 @@ export default function Cart() {
           <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: t.textMute }}>← swipe to remove</Text>
         </View>
 
+        <RewardsBar amount={sum.subtotal} />
+
         <View style={{ gap: 14 }}>
           {sum.lines.map((l, i) => (
-            <Animated.View key={l.variantId} entering={FadeInDown.delay(i * 60).springify()} exiting={FadeOut} layout={LinearTransition.springify().damping(16)}>
+            <Animated.View key={l.variantId} entering={FadeInDown.delay(Math.min(i, 6) * 35).springify()} exiting={FadeOut} layout={LinearTransition.springify().damping(16)}>
               <Line line={l} />
             </Animated.View>
           ))}
         </View>
 
+        <GiftLines gifts={rewards.gifts} />
+
         {/* Coins */}
-        <Animated.View entering={FadeInDown.delay(150)} layout={LinearTransition} style={{ marginTop: 22, backgroundColor: t.deep, borderRadius: 22, padding: 16, overflow: 'hidden' }}>
+        <Animated.View entering={FadeInDown.delay(75)} layout={LinearTransition} style={{ marginTop: 22, backgroundColor: t.deep, borderRadius: 22, padding: 16, overflow: 'hidden' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Coin size={36} spin />
             <View style={{ flex: 1 }}>

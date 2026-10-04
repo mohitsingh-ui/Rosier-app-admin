@@ -75,14 +75,14 @@ export function MenuShell({ children }: { children: ReactNode }) {
               <Text style={{ fontFamily: fonts.serif, fontSize: 28, color: t.text }}>Hi {name || 'there'}!</Text>
             </Animated.View>
             {ITEMS.map((it, i) => (
-              <Animated.View key={it.label} entering={FadeInLeft.delay(40 + i * 45).springify().damping(15)}>
+              <Animated.View key={it.label} entering={FadeInLeft.delay(20 + Math.min(i, 6) * 35).springify().damping(15)}>
                 <Pressable onPress={() => go(it.go)} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 10 }}>
                   <View style={{ width: 34, alignItems: 'center' }}>{React.cloneElement(it.icon as any, { color: t.text })}</View>
                   <Text style={{ fontFamily: fonts.serif, fontSize: 21, color: t.text }}>{it.label}</Text>
                 </Pressable>
               </Animated.View>
             ))}
-            <Animated.View entering={FadeInLeft.delay(480).springify()}>
+            <Animated.View entering={FadeInLeft.delay(160).springify()}>
               <Pressable
                 onPress={() =>
                   go(() => {
@@ -99,7 +99,7 @@ export function MenuShell({ children }: { children: ReactNode }) {
                 <Text style={{ fontFamily: fonts.serif, fontSize: 21, color: t.text }}>Logout</Text>
               </Pressable>
             </Animated.View>
-            <Animated.View entering={FadeInLeft.delay(560).springify()} style={{ marginTop: 26 }}>
+            <Animated.View entering={FadeInLeft.delay(160).springify()} style={{ marginTop: 26 }}>
               <RosierLogo width={96} color={t.text} />
               <Tagline style={{ fontFamily: fonts.serif, fontSize: 13, color: t.textSoft, marginTop: 2 }} />
             </Animated.View>
@@ -117,7 +117,7 @@ export function MenuShell({ children }: { children: ReactNode }) {
       </Animated.View>
 
       {open && (
-        <Animated.View entering={FadeInLeft.delay(150)} style={{ position: 'absolute', top: insets.top + 24, right: 22 }}>
+        <Animated.View entering={FadeInLeft.delay(75)} style={{ position: 'absolute', top: insets.top + 24, right: 22 }}>
           <PressableScale
             onPress={() => setOpen(false)}
             style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: t.mode === 'dark' ? '#3E2415' : '#C9A58C', alignItems: 'center', justifyContent: 'center' }}

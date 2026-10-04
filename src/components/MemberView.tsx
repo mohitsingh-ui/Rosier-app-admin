@@ -97,15 +97,15 @@ export function MemberView({ m, onRenew }: { m: Membership; onRenew: () => void 
   return (
     <View style={{ gap: 14 }}>
       <MemberCard name={customer?.name || appName} m={m} pct={pct} />
-      <Animated.Text entering={FadeInDown.delay(150)} style={{ fontFamily: fonts.serif, fontSize: 28, color: '#FBE6CF', textAlign: 'center', marginTop: 12 }}>
+      <Animated.Text entering={FadeInDown.delay(75)} style={{ fontFamily: fonts.serif, fontSize: 28, color: '#FBE6CF', textAlign: 'center', marginTop: 12 }}>
         {b.memberTitle}
       </Animated.Text>
-      <Animated.Text entering={FadeInDown.delay(220)} style={{ fontFamily: fonts.sans, fontSize: 13.5, color: SOFT, textAlign: 'center', marginTop: -6 }}>
+      <Animated.Text entering={FadeInDown.delay(110)} style={{ fontFamily: fonts.sans, fontSize: 13.5, color: SOFT, textAlign: 'center', marginTop: -6 }}>
         {b.memberSubtitle}
       </Animated.Text>
 
       {/* Numbers */}
-      <Animated.View entering={FadeInDown.delay(280)} style={{ flexDirection: 'row', gap: 10 }}>
+      <Animated.View entering={FadeInDown.delay(140)} style={{ flexDirection: 'row', gap: 10 }}>
         {[
           ['Orders as member', String(m.orders.length)],
           ['You’ve saved', saved > 0 ? `≈ ${rupee(saved)}` : '—'],
@@ -120,7 +120,7 @@ export function MemberView({ m, onRenew }: { m: Membership; onRenew: () => void 
 
       {/* Validity */}
       {totalDays > 0 && m.daysLeft != null && (
-        <Animated.View entering={FadeInDown.delay(320)} style={box}>
+        <Animated.View entering={FadeInDown.delay(160)} style={box}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13.5, color: '#FBE6CF' }}>Membership</Text>
             <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: renew ? '#F3A57B' : SOFT }}>
@@ -134,7 +134,7 @@ export function MemberView({ m, onRenew }: { m: Membership; onRenew: () => void 
 
       {/* Free ghee progress */}
       {target > 0 && (
-        <Animated.View entering={FadeInDown.delay(360)} style={box}>
+        <Animated.View entering={FadeInDown.delay(160)} style={box}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <MaterialCommunityIcons name="bottle-tonic-outline" size={22} color={GOLD} />
             <Text style={{ flex: 1, fontFamily: fonts.sansSemi, fontSize: 13.5, color: '#FBE6CF' }}>{b.gheeTitle}</Text>
@@ -152,7 +152,7 @@ export function MemberView({ m, onRenew }: { m: Membership; onRenew: () => void 
       {/* Active benefits */}
       <Text style={{ fontFamily: fonts.serif, fontSize: 20, color: GOLD, marginTop: 6 }}>Your benefits</Text>
       {b.perks.map((p, i) => (
-        <Animated.View key={`${p.title}-${i}`} entering={FadeInDown.delay(400 + i * 60).springify()} style={[box, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 }]}>
+        <Animated.View key={`${p.title}-${i}`} entering={FadeInDown.delay(120 + Math.min(i, 6) * 35).springify()} style={[box, { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 }]}>
           <View style={{ width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: '#8B6230', alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name={p.icon as any} size={22} color={GOLD} />
           </View>
@@ -170,7 +170,7 @@ export function MemberView({ m, onRenew }: { m: Membership; onRenew: () => void 
           <Text style={{ fontFamily: fonts.serif, fontSize: 20, color: GOLD, marginTop: 10, marginBottom: 10 }}>{b.updatesTitle}</Text>
           <View style={{ gap: 10 }}>
             {updates.map((u, i) => (
-              <Animated.View key={u.id || i} entering={FadeInDown.delay(i * 60)} style={[box, { padding: 0, overflow: 'hidden' }]}>
+              <Animated.View key={u.id || i} entering={FadeInDown.delay(Math.min(i, 6) * 35)} style={[box, { padding: 0, overflow: 'hidden' }]}>
                 {!!u.image && <Img source={u.image} size={360} style={{ width: '100%', height: 160 }} contentFit="cover" />}
                 <View style={{ padding: 14, gap: 4 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

@@ -48,16 +48,16 @@ export default function Login() {
             <RosierLogo width={110} color={t.mode === 'dark' ? '#E8C27A' : '#3E2415'} />
           </View>
         </Animated.View>
-        <Animated.Text entering={FadeInDown.delay(120)} style={{ fontFamily: fonts.serifBold, fontSize: 30, color: t.heading, textAlign: 'center', marginTop: 14 }}>
+        <Animated.Text entering={FadeInDown.delay(60)} style={{ fontFamily: fonts.serifBold, fontSize: 30, color: t.heading, textAlign: 'center', marginTop: 14 }}>
           {a.loginTitle}
         </Animated.Text>
-        <Animated.Text entering={FadeInDown.delay(200)} style={{ fontFamily: fonts.sans, fontSize: 15, color: t.textSoft, textAlign: 'center', marginTop: 8, lineHeight: 22 }}>
+        <Animated.Text entering={FadeInDown.delay(100)} style={{ fontFamily: fonts.sans, fontSize: 15, color: t.textSoft, textAlign: 'center', marginTop: 8, lineHeight: 22 }}>
           {a.loginBody}
         </Animated.Text>
 
         <View style={{ marginTop: 26, gap: 10 }}>
           {a.perks.map((p, i) => (
-            <Animated.View key={i} entering={FadeInDown.delay(260 + i * 80).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.cardStrong, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: t.border }}>
+            <Animated.View key={i} entering={FadeInDown.delay(120 + Math.min(i, 6) * 35).springify()} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.cardStrong, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: t.border }}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name={p.icon as any} size={20} color={t.primary} />
               </View>
