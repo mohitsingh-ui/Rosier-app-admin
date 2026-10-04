@@ -10,7 +10,9 @@ import { Coin } from '../../components/Coin';
 import { CountUp, PressableScale, Txt } from '../../components/ui';
 import { openStorePage } from '../../lib/cart';
 import { tap } from '../../lib/haptics';
+import { useContent } from '../../config/remote';
 import { useApp } from '../../store/app';
+import { logout as shopifyLogout, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
 
@@ -54,6 +56,11 @@ export default function Profile() {
   const balance = useCoins((s) => s.balance);
   const orders = useOrders((s) => s.orders.length);
   const wish = useWishlist((s) => s.handles.length);
+  const flags = useShopifyFlags();
+  const loggedIn = useLoggedIn();
+  const customer = useAuth((s) => s.customer);
+  const acc = useContent('account');
+  const orderCount = loggedIn && customer ? customer.orders.length : orders;
 
   const rows: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; sub?: string; go: () => void }[] = [
     { icon: 'package-variant-closed', label: 'My Orders', sub: 'Track, reorder, review', go: () => router.push('/orders') },
@@ -94,7 +101,7 @@ export default function Profile() {
             </Pressable>
             <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
             <Pressable onPress={() => router.push('/orders')} style={{ flex: 1, alignItems: 'center' }}>
-              <CountUp value={orders} style={{ fontFamily: fonts.sansSemi, fontSize: 18, color: '#fff' }} />
+              <CountUp value={orderCount} style={{ fontFamily: fonts.sansSemi, fontSize: 18, color: '#fff' }} />
               <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: '#E9D6C0' }}>Orders</Text>
             </Pressable>
             <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
@@ -105,6 +112,29 @@ export default function Profile() {
           </View>
         </LinearGradient>
       </Animated.View>
+
+      {flags.loginEnabled && !loggedIn && (
+        <Animated.View entering={FadeInDown.delay(80).springify()} style={{ marginTop: 14 }}>
+          <PressableScale scaleTo={0.98} onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: t.cardStrong, borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: t.primary }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="account-key-outline" size={22} color={t.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, color: t.text }}>{acc.profileCardTitle}</Text>
+              <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: t.textSoft }}>{acc.profileCardBody}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={t.textMute} />
+          </PressableScale>
+        </Animated.View>
+      )}
+      {loggedIn && customer && (
+        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: t.greenSoft, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 }}>
+          <MaterialCommunityIcons name="check-decagram" size={18} color={t.green} />
+          <Text style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 12.5, color: t.green }} numberOfLines={1}>
+            Logged in as {customer.email || customer.name}
+          </Text>
+        </View>
+      )}
 
       <Txt v="label" color={t.textMute} style={{ marginTop: 24, marginBottom: 10 }}>
         Appearance
@@ -139,6 +169,7 @@ export default function Profile() {
 
       <PressableScale
         onPress={() => {
+          shopifyLogout();
           logout();
           router.replace('/onboarding');
         }}

@@ -5,6 +5,7 @@ import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInLeft, interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../store/app';
+import { logout as shopifyLogout } from '../store/auth';
 import { fonts, useTheme } from '../theme';
 import { Avatar } from './Avatar';
 import { RosierLogo, Tagline } from './Logo';
@@ -83,6 +84,7 @@ export function MenuShell({ children }: { children: ReactNode }) {
               <Pressable
                 onPress={() =>
                   go(() => {
+                    shopifyLogout();
                     logout();
                     router.replace('/onboarding');
                   })

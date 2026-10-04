@@ -10,6 +10,7 @@ import { useFonts } from 'expo-font';
 import { SplashScreen } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { StatusBar } from 'expo-status-bar';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FlyHost } from '../components/FlyToCart';
 import { RemoteGate } from '../components/RemoteGate';
 import { getContent, useRemote } from '../config/remote';
+import { creditNewOrders, hasTokens, loadCustomer } from '../store/auth';
 import { ToastHost } from '../components/Toast';
 import { useBanners } from '../data/banners';
 import { useCatalog } from '../data/catalog';
@@ -25,6 +27,8 @@ import { useCoins } from '../store/shop';
 import { useTheme } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// Web only: finishes the Shopify login popup. Does nothing on phones.
+WebBrowser.maybeCompleteAuthSession();
 
 /** New notifications published from the admin panel land in the inbox once. */
 function deliverAnnouncements() {
@@ -83,6 +87,8 @@ export default function RootLayout() {
       // Credit any coins whose waiting period is over.
       useCoins.getState().releasePending();
       deliverAnnouncements();
+      // Logged-in customers: pick up new Shopify orders (app or website) and their coins.
+      if (hasTokens()) loadCustomer().then(() => creditNewOrders());
     })();
 
     // Coming back to the app picks up anything published in the meantime.
@@ -93,6 +99,7 @@ export default function RootLayout() {
       await useRemote.getState().refresh();
       deliverAnnouncements();
       useCatalog.getState().refresh();
+      if (hasTokens()) loadCustomer().then(() => creditNewOrders());
     });
     return () => sub.remove();
   }, [hydrated]);
@@ -110,6 +117,8 @@ export default function RootLayout() {
           <Stack.Screen name="product/[handle]" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="search" options={{ animation: 'fade' }} />
           <Stack.Screen name="preview" options={{ animation: 'none' }} />
+          <Stack.Screen name="login" options={{ animation: 'fade_from_bottom' }} />
+          <Stack.Screen name="auth" options={{ animation: 'none' }} />
         </Stack>
         <FlyHost />
         <RemoteGate />

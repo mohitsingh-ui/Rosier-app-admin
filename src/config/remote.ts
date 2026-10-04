@@ -34,8 +34,13 @@ const build = (remote?: Partial<Content>) => {
   return out;
 };
 
+export type ShopifyFlags = { loginEnabled: boolean; cartCheckout: boolean; requireLogin: boolean };
+const NO_SHOPIFY: ShopifyFlags = { loginEnabled: false, cartCheckout: false, requireLogin: false };
+
 type RemoteState = {
   content: Content;
+  /** Which Shopify features are switched on in the admin panel. */
+  shopify: ShopifyFlags;
   version: number;
   fetchedAt: number;
   /** Set when an admin opened a "Preview on phone" link — shows unpublished drafts. */
@@ -55,6 +60,7 @@ export const useRemote = create<RemoteState>()(
   persist(
     (set, get) => ({
       content: build(),
+      shopify: NO_SHOPIFY,
       version: 0,
       fetchedAt: 0,
       preview: null,
@@ -79,7 +85,7 @@ export const useRemote = create<RemoteState>()(
           const json = await res.json();
           const content = build(json.content);
           applyCoins(content.coins);
-          set({ content, version: json.version ?? 0, fetchedAt: Date.now() });
+          set({ content, shopify: { ...NO_SHOPIFY, ...(json.shopify ?? {}) }, version: json.version ?? 0, fetchedAt: Date.now() });
           return true;
         } catch {
           return false; // Offline — keep the cached content.
@@ -100,11 +106,12 @@ export const useRemote = create<RemoteState>()(
     {
       name: 'rosier-remote',
       storage,
-      partialize: ({ content, version, fetchedAt, preview, popupSeen, announced }) => ({ content, version, fetchedAt, preview, popupSeen, announced }),
+      partialize: ({ content, shopify, version, fetchedAt, preview, popupSeen, announced }) => ({ content, shopify, version, fetchedAt, preview, popupSeen, announced }),
       // Re-merge cached content with defaults in case this app version added new fields.
       merge: (persisted: any, current) => {
         const next = { ...current, ...(persisted ?? {}) } as RemoteState;
         next.content = build(persisted?.content);
+        next.shopify = { ...NO_SHOPIFY, ...(persisted?.shopify ?? {}) };
         applyCoins(next.content.coins);
         return next;
       },

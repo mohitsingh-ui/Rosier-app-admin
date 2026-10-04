@@ -1,9 +1,11 @@
 import * as WebBrowser from 'expo-web-browser';
+import { AppState, Platform } from 'react-native';
 import { useMemo } from 'react';
 import { COINS, coinsForAmount } from '../config/coins';
 import { findVariant, STORE_URL, useProducts } from '../data/catalog';
 import { CartItem, useCart, useCoins } from '../store/shop';
 import type { Product, Variant } from '../data/types';
+import { createCheckout, getShopifyFlags } from '../store/auth';
 
 export type CartLine = CartItem & { product: Product; variant: Variant };
 
@@ -35,20 +37,50 @@ export function useCartSummary() {
   }, [items, products, voucherId]);
 }
 
+const BROWSER = { toolbarColor: '#3E2415', controlsColor: '#F3D48B', presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET };
+
+/** Opens a page in the in-app browser and resolves when the person comes back to the app. */
+function openAndWait(url: string) {
+  if (Platform.OS !== 'android') return WebBrowser.openBrowserAsync(url, BROWSER).then(() => undefined);
+  // On Android the call returns straight away, so wait until the app is in front again.
+  return new Promise<void>((resolve) => {
+    let left = false;
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') left = true;
+      else if (left) {
+        sub.remove();
+        resolve();
+      }
+    });
+    WebBrowser.openBrowserAsync(url, BROWSER).catch(() => {
+      sub.remove();
+      resolve();
+    });
+  });
+}
+
 /**
  * Opens Shopify checkout with the selected lines already in the cart.
- * Uses Shopify's cart permalink: /cart/{variant}:{qty},…?discount=CODE
+ * With the Storefront API switched on (admin panel → Shopify connection) this builds a
+ * real Shopify cart linked to the logged-in customer; otherwise it uses the cart
+ * permalink /cart/{variant}:{qty},…?discount=CODE.
+ * Resolves when the person is back in the app.
  */
-export async function openCheckout(lines: { variantId: number; qty: number }[], discountCode?: string) {
+export async function openCheckout(lines: { variantId: number; qty: number }[], discountCode?: string): Promise<{ mode: 'shopify' | 'web'; loggedIn: boolean }> {
+  if (getShopifyFlags().cartCheckout) {
+    try {
+      const r = await createCheckout(lines, discountCode);
+      await openAndWait(r.url);
+      return { mode: 'shopify', loggedIn: r.loggedIn };
+    } catch {
+      // Fall back to the website cart below.
+    }
+  }
   const path = lines.map((l) => `${l.variantId}:${l.qty}`).join(',');
   const params = new URLSearchParams({ utm_source: 'rosier_app', utm_medium: 'app' });
   if (discountCode) params.set('discount', discountCode);
-  const url = `${STORE_URL}/cart/${path}?${params.toString()}`;
-  return WebBrowser.openBrowserAsync(url, {
-    toolbarColor: '#3E2415',
-    controlsColor: '#F3D48B',
-    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-  });
+  await openAndWait(`${STORE_URL}/cart/${path}?${params.toString()}`);
+  return { mode: 'web', loggedIn: false };
 }
 
 export const openStorePage = (path: string) =>

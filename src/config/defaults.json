@@ -713,5 +713,31 @@
   },
   "announcements": {
     "items": []
+  },
+  "account": {
+    "loginTitle": "Log in to Rosier",
+    "loginBody": "Use the same email you shop with on rosierfoods.com. We'll send you a one-time code. No password to remember.",
+    "loginButton": "Continue with email",
+    "skipLabel": "Not now",
+    "perks": [
+      {
+        "icon": "package-variant-closed",
+        "text": "All your orders in one place, with live tracking"
+      },
+      {
+        "icon": "map-marker-check-outline",
+        "text": "Saved addresses, so checkout takes seconds"
+      },
+      {
+        "icon": "database-outline",
+        "text": "Rosier Coins on every order, app or website"
+      }
+    ],
+    "checkoutPromptTitle": "Check out faster?",
+    "checkoutPromptBody": "Log in and we'll fill in your address and details for you.",
+    "guestLabel": "Continue as guest",
+    "profileCardTitle": "Log in with your Rosier account",
+    "profileCardBody": "See your orders and check out with saved details.",
+    "ordersLoginPrompt": "Log in to see all your orders from the app and rosierfoods.com."
   }
 }

@@ -12,7 +12,7 @@ import { useOrders } from '../store/shop';
 import { fonts, useTheme } from '../theme';
 
 export default function OrderSuccess() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, coins } = useLocalSearchParams<{ id: string; coins?: string }>();
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const order = useOrders((s) => s.orders.find((o) => o.id === id));
@@ -30,7 +30,7 @@ export default function OrderSuccess() {
       </Animated.Text>
       <Animated.Text entering={FadeInDown.delay(420)} style={{ fontFamily: fonts.sans, fontSize: 15, color: t.textSoft, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
         Order #{id} is with our kitchen now.{'\n'}
-        {order ? `${order.coins} Rosier Coins` : 'Your coins'} will unlock in {COINS.pendingDays} days.
+        {order ? `${order.coins} Rosier Coins` : coins ? `${coins} Rosier Coins` : 'Your coins'} will unlock in {COINS.pendingDays} days.
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(560)} style={{ alignSelf: 'stretch', marginTop: 30, gap: 10 }}>
         <Button label="View my coins" onPress={() => router.replace('/coins')} />

@@ -8,11 +8,13 @@ import { Coin } from '../../components/Coin';
 import { SwipeRow } from '../../components/SwipeRow';
 import { toast } from '../../components/Toast';
 import { Button, CountUp, EmptyState, Img, PressableScale, QtyStepper, Txt } from '../../components/ui';
-import { COINS } from '../../config/coins';
+import { COINS, coinsForAmount } from '../../config/coins';
+import { useContent } from '../../config/remote';
 import { CartLine, openCheckout, useCartSummary } from '../../lib/cart';
 import { rupee, shortTitle } from '../../lib/format';
 import { success, tap, warn } from '../../lib/haptics';
 import { useApp } from '../../store/app';
+import { creditNewOrders, loadCustomer, login, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCart, useCoins, useOrders } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
 
@@ -93,17 +95,52 @@ export default function Cart() {
   const unlock = useCoins((s) => s.unlockVoucher);
   const releaseVoucher = useCoins((s) => s.releaseVoucher);
   const [confirm, setConfirm] = useState(false);
+  const [askLogin, setAskLogin] = useState(false);
+  const flags = useShopifyFlags();
+  const loggedIn = useLoggedIn();
+  const acc = useContent('account');
 
   const count = sum.lines.reduce((n, l) => n + l.qty, 0);
 
-  const checkout = async () => {
+  const checkout = async (skipLoginPrompt = false) => {
     if (!sum.selected.length) return toast('Select at least one item', 'info');
+    if (flags.loginEnabled && !loggedIn && !skipLoginPrompt) {
+      setAskLogin(true);
+      return;
+    }
     success();
-    await openCheckout(
+    const before = new Set((useAuth.getState().customer?.orders ?? []).map((o) => o.id));
+    const r = await openCheckout(
       sum.selected.map((l) => ({ variantId: l.variantId, qty: l.qty })),
       sum.voucherOk ? sum.voucher!.code : undefined,
     );
+    if (r.mode === 'shopify' && r.loggedIn) {
+      // Logged in: check Shopify for the new order instead of asking.
+      const c = await loadCustomer();
+      creditNewOrders();
+      const fresh = (c?.orders ?? []).find((o) => !before.has(o.id) && !o.cancelled);
+      if (!fresh) return toast('Checkout closed. Your cart is saved.', 'info');
+      const coins = coinsForAmount(fresh.subtotal || fresh.total);
+      const id = fresh.name.replace(/^#/, '');
+      if (sum.voucherOk) useCoins.getState().consumeVoucher();
+      useCart.getState().removeSelected();
+      useApp.getState().pushNotification('Order placed 🎉', `${coins} Rosier Coins are on their way for order #${id}.`, { link: 'app:/orders' });
+      router.push({ pathname: '/order-success', params: { id, coins: String(coins) } });
+      return;
+    }
     setConfirm(true);
+  };
+
+  const loginThenCheckout = async () => {
+    setAskLogin(false);
+    try {
+      if (await login()) {
+        toast('You’re logged in', 'ok');
+        setTimeout(() => checkout(true), 400);
+      }
+    } catch (e: any) {
+      toast(e?.message || 'Login didn’t work. Please try again.', 'info');
+    }
   };
 
   const placeOrder = () => {
@@ -231,8 +268,33 @@ export default function Cart() {
             <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: '#F3D48B' }}>+{sum.coins} coins on this order</Text>
           </View>
         </View>
-        <Button label="Checkout" icon="lock-closed" kind="gold" onPress={checkout} style={{ height: 50, paddingHorizontal: 20 }} disabled={!sum.selected.length} />
+        <Button label="Checkout" icon="lock-closed" kind="gold" onPress={() => checkout()} style={{ height: 50, paddingHorizontal: 20 }} disabled={!sum.selected.length} />
       </View>
+
+      {/* Log in for a faster checkout? */}
+      <Modal visible={askLogin} transparent animationType="fade" onRequestClose={() => setAskLogin(false)}>
+        <Pressable onPress={() => setAskLogin(false)} style={{ flex: 1, backgroundColor: t.overlay, justifyContent: 'flex-end' }}>
+          <Animated.View entering={FadeInDown.springify().damping(16)} style={{ backgroundColor: t.cardStrong, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: insets.bottom + 24, alignItems: 'center' }}>
+            <MaterialCommunityIcons name="account-check-outline" size={44} color={t.primary} />
+            <Txt v="h3" style={{ marginTop: 8, textAlign: 'center' }}>{acc.checkoutPromptTitle}</Txt>
+            <Txt v="body" color={t.textSoft} style={{ textAlign: 'center', marginTop: 6 }}>
+              {acc.checkoutPromptBody}
+            </Txt>
+            <Button label={acc.loginButton} icon="mail-outline" onPress={loginThenCheckout} style={{ alignSelf: 'stretch', marginTop: 18 }} />
+            {!flags.requireLogin && (
+              <Button
+                label={acc.guestLabel}
+                kind="ghost"
+                onPress={() => {
+                  setAskLogin(false);
+                  checkout(true);
+                }}
+                style={{ alignSelf: 'stretch', marginTop: 10 }}
+              />
+            )}
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       {/* After returning from Shopify checkout */}
       <Modal visible={confirm} transparent animationType="fade" onRequestClose={() => setConfirm(false)}>
