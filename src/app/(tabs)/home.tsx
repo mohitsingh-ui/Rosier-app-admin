@@ -20,6 +20,8 @@ import { defaultVariant, resolveImage, shopProducts, useCatalog, useCategories, 
 import type { Product } from '../../data/types';
 import { isLive, useContent } from '../../config/remote';
 import { openLink } from '../../lib/links';
+import { Editable, inEditor } from '../../components/Editable';
+import { SectionShell } from '../../components/SectionShell';
 import { Image } from 'expo-image';
 import { greeting } from '../../lib/format';
 import { useApp } from '../../store/app';
@@ -79,6 +81,8 @@ export default function Home() {
   const gap = (n: number) => Math.round(n * L.sectionSpacing);
   const general = useContent('general');
   const categories = useCategories();
+  const catItems = useContent('categories').items as { id: string }[];
+  const catIndex = (id: string) => catItems.findIndex((x) => x.id === id);
   const all = useMemo(() => shopProducts(products), [products]);
   const byHandle = (h: string) => all.find((p) => p.handle === h);
   const pick = (handles: string[] = [], category = '') =>
@@ -146,6 +150,7 @@ export default function Home() {
             <Ionicons name="chevron-forward" size={16} color={t.text} />
           </PressableScale>
         </Animated.View>
+        <Editable id="home.header" label="Header & search bar">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <PressableScale scaleTo={0.98} onPress={() => router.push('/search')} style={{ flex: 1, height: SEARCH_H, borderRadius: 24, backgroundColor: t.cardStrong, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10 }}>
             <Ionicons name="search" size={20} color={t.textMute} />
@@ -163,6 +168,7 @@ export default function Home() {
             )}
           </PressableScale>
         </View>
+        </Editable>
       </Animated.View>
 
       <Animated.ScrollView
@@ -210,6 +216,13 @@ export default function Home() {
           })}
         </ScrollView>
 
+        <Editable
+          id="home.hero"
+          label="Top slider"
+          target={hasImageSlides ? 'theme.layout.heroImageRatio' : 'theme.layout.heroCardHeight'}
+          base={hasImageSlides ? (L.heroImageRatio > 0 ? L.heroImageRatio : bannerAspect) : L.heroCardHeight}
+          invert={hasImageSlides}
+        >
         <View style={{ marginTop: 14 }}>
           <Carousel
             width={width}
@@ -239,17 +252,34 @@ export default function Home() {
           />
         </View>
 
-        <LiveTiles width={width} />
+        </Editable>
 
-        {home.sections.filter((sec) => sec.enabled !== false).map((sec: any, si) => {
+        <Editable id="home.tiles" label="Tiles under the slider" target="theme.layout.tileRatio" base={L.tileRatio}>
+          <LiveTiles width={width} />
+        </Editable>
+
+        {home.sections.map((sec: any, si) => {
+          if (sec.enabled === false) {
+            // Hidden sections show as a thin bar in the admin preview so they can be switched back on.
+            return inEditor ? (
+              <Editable key={`hidden-${si}`} id={`home.sections.${si}`} label={`Hidden · ${sec.title || sec.type}`}>
+                <View style={{ marginHorizontal: 20, marginTop: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: t.border, borderRadius: 10, padding: 8 }}>
+                  <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: t.textMute, textAlign: 'center' }}>Hidden section · {sec.title || sec.type}</Text>
+                </View>
+              </Editable>
+            ) : null;
+          }
+          const ts = { color: sec.titleColor || undefined, ...(Number(sec.titleSize) > 0 ? { fontSize: Number(sec.titleSize), lineHeight: Number(sec.titleSize) * 1.2 } : {}) };
+          const body = (() => {
           switch (sec.type) {
             case 'categories':
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title || 'Discover category'} style={{ marginTop: gap(22) }} />
+                  <SectionHeader title={sec.title || 'Discover category'} style={{ marginTop: gap(22) }} titleStyle={ts} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}>
                     {categories.map((c, i) => (
-                      <Animated.View key={c.id} entering={FadeInDown.delay(i * 70).springify()}>
+                      <Editable key={c.id} id={`categories.items.${catIndex(c.id)}`} label={`Category · ${c.label}`} target="theme.layout.categoryTile" base={L.categoryTile}>
+                      <Animated.View entering={FadeInDown.delay(i * 70).springify()}>
                         <PressableScale onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })} style={{ alignItems: 'center', width: L.categoryTile + 4 }}>
                           <View style={{ width: L.categoryTile, height: Math.round(L.categoryTile * 0.89), borderRadius: 12, backgroundColor: t.mode === 'dark' ? t.card : '#F4E3CF', alignItems: 'center', justifyContent: 'center' }}>
                             <CategoryIcon name={c.icon} image={c.image} size={L.categoryIcon} color={t.mode === 'dark' ? '#D8A15A' : '#7E3F18'} />
@@ -257,19 +287,22 @@ export default function Home() {
                           <Text style={{ fontFamily: fonts.serifRegular, fontSize: 15, color: t.heading, marginTop: 6 }} numberOfLines={1}>{c.label}</Text>
                         </PressableScale>
                       </Animated.View>
+                      </Editable>
                     ))}
                   </ScrollView>
                 </View>
               );
             case 'deals': {
               const list = sec.handles?.length ? pick(sec.handles) : autoDeals;
-              if (!list.length) return null;
+              if (!list.length) return inEditor ? <EditorHint text={`${sec.title || 'Products'} · pick products or a category →`} /> : null;
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title || 'Limited deals'} action="see all" onAction={() => router.push({ pathname: '/collection/[id]', params: { id: 'deals' } })} style={{ marginTop: gap(24) }} />
+                  <SectionHeader titleStyle={ts} title={sec.title || 'Limited deals'} action="see all" onAction={() => router.push({ pathname: '/collection/[id]', params: { id: 'deals' } })} style={{ marginTop: gap(24) }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
                     {list.map((p, i) => (
-                      <DealCard key={p.handle} product={p} index={i} width={dealW} />
+                      <Editable key={p.handle} id="theme.cards" label="Product cards (all)" target="theme.layout.productImageRatio" base={L.productImageRatio}>
+                        <DealCard product={p} index={i} width={dealW} />
+                      </Editable>
                     ))}
                   </ScrollView>
                 </View>
@@ -283,12 +316,12 @@ export default function Home() {
               );
             case 'grid': {
               const list = pick(sec.handles, sec.category).slice(0, Number(sec.limit) || 6);
-              if (!list.length) return null;
+              if (!list.length) return inEditor ? <EditorHint text={`${sec.title || 'Products'} · pick products or a category →`} /> : null;
               return (
                 <View key={sec.id ?? si}>
                   {sec.subtitle ? (
                     <>
-                      <Txt v="h1" style={{ textAlign: 'center', marginTop: gap(28), marginBottom: 4, fontFamily: fonts.serif, paddingHorizontal: 20 }}>
+                      <Txt v="h1" style={[{ textAlign: 'center', marginTop: gap(28), marginBottom: 4, fontFamily: fonts.serif, paddingHorizontal: 20 }, ts]}>
                         {sec.title}
                       </Txt>
                       <Txt v="small" color={t.textSoft} style={{ textAlign: 'center', marginBottom: 16, paddingHorizontal: 20 }}>
@@ -297,14 +330,16 @@ export default function Home() {
                     </>
                   ) : (
                     !!sec.title && (
-                      <Txt v="h2" style={{ textAlign: 'center', marginTop: gap(30), marginBottom: 14, paddingHorizontal: 20 }}>
+                      <Txt v="h2" style={[{ textAlign: 'center', marginTop: gap(30), marginBottom: 14, paddingHorizontal: 20 }, ts]}>
                         {sec.title}
                       </Txt>
                     )
                   )}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20 }}>
                     {list.map((p, i) => (
-                      <GridCard key={p.handle} product={p} index={i} width={cardW} />
+                      <Editable key={p.handle} id="theme.cards" label="Product cards (all)" target="theme.layout.productImageRatio" base={L.productImageRatio}>
+                        <GridCard product={p} index={i} width={cardW} />
+                      </Editable>
                     ))}
                   </View>
                   {sec.showViewAll && (
@@ -350,24 +385,32 @@ export default function Home() {
             }
             case 'row': {
               const list = pick(sec.handles, sec.category);
-              if (!list.length) return null;
+              if (!list.length) return inEditor ? <EditorHint text={`${sec.title || 'Products'} · pick products or a category →`} /> : null;
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title} action="see all" onAction={() => (sec.link ? openLink(sec.link) : router.navigate('/shop'))} style={{ marginTop: gap(26) }} />
+                  <SectionHeader titleStyle={ts} title={sec.title} action="see all" onAction={() => (sec.link ? openLink(sec.link) : router.navigate('/shop'))} style={{ marginTop: gap(26) }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
                     {list.map((p, i) => (
-                      <DealCard key={p.handle} product={p} index={i} width={dealW} />
+                      <Editable key={p.handle} id="theme.cards" label="Product cards (all)" target="theme.layout.productImageRatio" base={L.productImageRatio}>
+                        <DealCard product={p} index={i} width={dealW} />
+                      </Editable>
                     ))}
                   </ScrollView>
                 </View>
               );
             }
             case 'image':
+              if (!sec.image && inEditor)
+                return (
+                  <View style={{ marginTop: gap(26), marginHorizontal: 20, height: 140, borderRadius: L.imageBannerRadius, borderWidth: 2, borderStyle: 'dashed', borderColor: t.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: t.card }}>
+                    <Text style={{ fontFamily: fonts.sansMedium, color: t.primary }}>Image banner · add an image →</Text>
+                  </View>
+                );
               return sec.image ? <ImageSection key={sec.id ?? si} image={sec.image} link={sec.link} width={width} height={Number(sec.height) || 0} radius={L.imageBannerRadius} top={gap(26)} /> : null;
             case 'reviews':
               return (
                 <View key={sec.id ?? si}>
-                  <Txt v="h2" style={{ marginTop: gap(30), marginBottom: 4, paddingHorizontal: 20 }}>
+                  <Txt v="h2" style={[{ marginTop: gap(30), marginBottom: 4, paddingHorizontal: 20 }, ts]}>
                     {sec.title}
                   </Txt>
                   {!!sec.subtitle && (
@@ -387,6 +430,13 @@ export default function Home() {
             default:
               return null;
           }
+          })();
+          if (!body) return null;
+          return (
+            <SectionShell key={sec.id ?? `s${si}`} index={si} sec={sec} width={width} imageHeight={sec.type === 'image' ? Number(sec.height) || 0 : undefined}>
+              {body}
+            </SectionShell>
+          );
         })}
 
         <View style={{ alignItems: 'center', marginTop: 36, gap: 4 }}>
@@ -395,6 +445,16 @@ export default function Home() {
           <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: t.textMute }}>{general.footerNote}</Text>
         </View>
       </Animated.ScrollView>
+    </View>
+  );
+}
+
+/** Shown only in the admin preview for sections that have nothing to show yet. */
+function EditorHint({ text }: { text: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ marginTop: 22, marginHorizontal: 20, height: 90, borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', borderColor: t.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: t.card }}>
+      <Text style={{ fontFamily: fonts.sansMedium, color: t.primary, textAlign: 'center', paddingHorizontal: 12 }}>{text}</Text>
     </View>
   );
 }

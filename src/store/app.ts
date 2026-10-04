@@ -14,12 +14,15 @@ type AppState = {
   email: string;
   photo: string | null;
   themePref: ThemePref;
+  /** The customer turned off seasonal effects (snow, sparkles…) in Profile. */
+  effectsOff: boolean;
   menuOpen: boolean;
   notifications: { id: string; title: string; body: string; time: number; read: boolean; link?: string }[];
   setOnboarded: (v: boolean) => void;
   setIntroVersion: (v: number) => void;
   setProfile: (p: Partial<Pick<AppState, 'name' | 'phone' | 'email'>>) => void;
   setThemePref: (t: ThemePref) => void;
+  setEffectsOff: (v: boolean) => void;
   setPhoto: (uri: string | null) => void;
   setMenuOpen: (v: boolean) => void;
   pushNotification: (title: string, body: string, opts?: { id?: string; link?: string }) => void;
@@ -37,6 +40,7 @@ export const useApp = create<AppState>()(
       email: '',
       photo: null,
       themePref: 'light',
+      effectsOff: false,
       menuOpen: false,
       // The welcome message (editable in the admin panel) is added on first launch — see _layout.tsx.
       notifications: [],
@@ -44,6 +48,7 @@ export const useApp = create<AppState>()(
       setIntroVersion: (v) => set({ introVersion: v }),
       setProfile: (p) => set(p),
       setThemePref: (t) => set({ themePref: t }),
+      setEffectsOff: (v) => set({ effectsOff: v }),
       setPhoto: (uri) => set({ photo: uri }),
       setMenuOpen: (v) => set({ menuOpen: v }),
       pushNotification: (title, body, opts) =>

@@ -18,6 +18,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FlyHost } from '../components/FlyToCart';
 import { RemoteGate } from '../components/RemoteGate';
+import { SeasonalEffects } from '../components/SeasonalEffects';
 import { getContent, useRemote } from '../config/remote';
 import { creditNewOrders, hasTokens, loadCustomer } from '../store/auth';
 import { reportRoute, startEditorBridge } from '../lib/editorBridge';
@@ -127,7 +128,9 @@ export default function RootLayout() {
           <Stack.Screen name="preview" options={{ animation: 'none' }} />
           <Stack.Screen name="login" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="auth" options={{ animation: 'none' }} />
+          <Stack.Screen name="track" options={{ animation: 'fade_from_bottom' }} />
         </Stack>
+        <SeasonalEffects />
         <FlyHost />
         <RemoteGate />
         <ToastHost />

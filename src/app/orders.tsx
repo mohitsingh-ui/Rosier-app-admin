@@ -1,30 +1,20 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { toast } from '../components/Toast';
+import { trackState, trackSummary } from '../components/Tracking';
 import { Button, EmptyState, Img, PressableScale, ScreenHeader } from '../components/ui';
 import { coinsForAmount } from '../config/coins';
 import { useContent } from '../config/remote';
 import { findProduct, findVariant, useProducts } from '../data/catalog';
-import { openStorePage } from '../lib/cart';
 import { rupee, shortTitle } from '../lib/format';
 import { success } from '../lib/haptics';
 import { creditNewOrders, loadCustomer, ShopOrder, useAuth, useLoggedIn, useShopifyFlags } from '../store/auth';
 import { useCart, useOrders } from '../store/shop';
 import { fonts, useTheme } from '../theme';
 
-const nice = (s?: string | null) => (s ? s.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : '');
-
-function statusOf(o: ShopOrder) {
-  if (o.cancelled) return { label: 'Cancelled', tone: 'danger' as const };
-  if (o.fulfillmentStatus === 'FULFILLED') return { label: 'Delivered / shipped', tone: 'green' as const };
-  if (o.fulfillmentStatus === 'PARTIALLY_FULFILLED' || o.fulfillmentStatus === 'IN_PROGRESS') return { label: 'On the way', tone: 'gold' as const };
-  if (o.financialStatus === 'PENDING') return { label: 'Payment pending', tone: 'gold' as const };
-  return { label: nice(o.fulfillmentStatus) === 'Unfulfilled' ? 'Being packed' : nice(o.fulfillmentStatus) || 'Placed', tone: 'gold' as const };
-}
 
 export default function Orders() {
   const t = useTheme();
@@ -105,7 +95,8 @@ export default function Orders() {
           <>
             {!customer.orders.length && !loading && <EmptyState icon="cube-outline" title="No orders yet" body="Your first order is one tap away. And yes, it earns coins." cta="Shop now" onCta={() => router.navigate('/shop')} />}
             {customer.orders.map((o, i) => {
-              const st = statusOf(o);
+              const st = trackSummary(o);
+              const eta = !o.cancelled ? trackState(o).eta : null;
               return (
                 <Animated.View key={o.id} entering={FadeInDown.delay(i * 50).springify()} style={card}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -115,6 +106,11 @@ export default function Orders() {
                     </View>
                     {pill(st.label, st.tone)}
                   </View>
+                  {!!eta && st.label !== 'Delivered' && (
+                    <Text style={{ fontFamily: fonts.sansMedium, fontSize: 12, color: t.primary, marginTop: 6 }}>
+                      Expected by {new Date(eta).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </Text>
+                  )}
                   <View style={{ marginTop: 12, gap: 8 }}>
                     {o.items.map((it, k) => (
                       <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -144,7 +140,7 @@ export default function Orders() {
                       kind="ghost"
                       label="Track"
                       icon="navigate-outline"
-                      onPress={() => WebBrowser.openBrowserAsync(o.statusPageUrl, { toolbarColor: '#3E2415', controlsColor: '#F3D48B' })}
+                      onPress={() => router.push({ pathname: '/track', params: { order: o.name } })}
                       style={{ flex: 1 }}
                     />
                   </View>
@@ -186,11 +182,11 @@ export default function Orders() {
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                   <Button small label="Reorder" icon="repeat" onPress={() => reorderLocal(o)} style={{ flex: 1 }} />
-                  <Button small kind="ghost" label="Track" icon="navigate-outline" onPress={() => openStorePage('/account')} style={{ flex: 1 }} />
+                  <Button small kind="ghost" label="Track" icon="navigate-outline" onPress={() => router.push({ pathname: '/track', params: { order: o.id } })} style={{ flex: 1 }} />
                 </View>
               </Animated.View>
             ))}
-            {local.length > 0 && <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: t.textMute, textAlign: 'center' }}>Live tracking and invoices are in your rosierfoods.com account.</Text>}
+            {local.length > 0 && <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: t.textMute, textAlign: 'center' }}>Tap Track and enter the email or phone you ordered with to see courier updates.</Text>}
           </>
         )}
       </ScrollView>

@@ -6,6 +6,7 @@ import { findVariant, STORE_URL, useProducts } from '../data/catalog';
 import { CartItem, useCart, useCoins } from '../store/shop';
 import type { Product, Variant } from '../data/types';
 import { createCheckout, getShopifyFlags } from '../store/auth';
+import { checkoutKitAvailable, presentCheckout } from './checkoutKit';
 
 export type CartLine = CartItem & { product: Product; variant: Variant };
 
@@ -66,10 +67,25 @@ function openAndWait(url: string) {
  * permalink /cart/{variant}:{qty},…?discount=CODE.
  * Resolves when the person is back in the app.
  */
-export async function openCheckout(lines: { variantId: number; qty: number }[], discountCode?: string): Promise<{ mode: 'shopify' | 'web'; loggedIn: boolean }> {
+export type CheckoutResult = {
+  mode: 'shopify' | 'web';
+  loggedIn: boolean;
+  /** Set when checkout ran inside the app (Checkout Kit): we know for sure whether they paid. */
+  inApp?: boolean;
+  completed?: boolean;
+  orderId?: string;
+};
+
+export async function openCheckout(lines: { variantId: number; qty: number }[], discountCodes: string[] = []): Promise<CheckoutResult> {
+  const codes = [...new Set(discountCodes.filter(Boolean))];
   if (getShopifyFlags().cartCheckout) {
     try {
-      const r = await createCheckout(lines, discountCode);
+      const r = await createCheckout(lines, codes);
+      if (checkoutKitAvailable()) {
+        // Checkout + payment inside the app.
+        const o = await presentCheckout(r.url);
+        return { mode: 'shopify', loggedIn: r.loggedIn, inApp: true, completed: o.completed, orderId: o.orderId };
+      }
       await openAndWait(r.url);
       return { mode: 'shopify', loggedIn: r.loggedIn };
     } catch {
@@ -78,7 +94,8 @@ export async function openCheckout(lines: { variantId: number; qty: number }[], 
   }
   const path = lines.map((l) => `${l.variantId}:${l.qty}`).join(',');
   const params = new URLSearchParams({ utm_source: 'rosier_app', utm_medium: 'app' });
-  if (discountCode) params.set('discount', discountCode);
+  // Shopify accepts several codes separated by commas.
+  if (codes.length) params.set('discount', codes.join(','));
   await openAndWait(`${STORE_URL}/cart/${path}?${params.toString()}`);
   return { mode: 'web', loggedIn: false };
 }

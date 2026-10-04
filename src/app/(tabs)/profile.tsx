@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, ScrollView, Text, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
@@ -10,11 +10,41 @@ import { Coin } from '../../components/Coin';
 import { CountUp, PressableScale, Txt } from '../../components/ui';
 import { openStorePage } from '../../lib/cart';
 import { tap } from '../../lib/haptics';
-import { useContent } from '../../config/remote';
+import { isLive, useContent } from '../../config/remote';
 import { useApp } from '../../store/app';
 import { logout as shopifyLogout, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
+
+/** Lets customers switch off snow / sparkles etc. Only shown while an effect is running. */
+function EffectsSwitch() {
+  const t = useTheme();
+  const cfg = useContent('effects');
+  const off = useApp((s) => s.effectsOff);
+  const setOff = useApp((s) => s.setEffectsOff);
+  const live = cfg?.enabled && cfg.userToggle && (cfg.items ?? []).find((e) => e && isLive(e));
+  if (!live) return null;
+  return (
+    <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.card, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 }}>
+      <MaterialCommunityIcons name="snowflake-variant" size={20} color={t.primary} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, color: t.text }}>Seasonal effects</Text>
+        <Text style={{ fontFamily: fonts.sans, fontSize: 11.5, color: t.textMute }} numberOfLines={1}>
+          {live.name || 'Festive animation'} on the screen
+        </Text>
+      </View>
+      <Switch
+        value={!off}
+        onValueChange={(v) => {
+          tap();
+          setOff(!v);
+        }}
+        trackColor={{ true: t.primary, false: t.border }}
+        thumbColor="#fff"
+      />
+    </View>
+  );
+}
 
 function ThemeSwitch() {
   const t = useTheme();
@@ -60,10 +90,14 @@ export default function Profile() {
   const loggedIn = useLoggedIn();
   const customer = useAuth((s) => s.customer);
   const acc = useContent('account');
+  const track = useContent('tracking');
+  const coupons = useContent('coupons');
   const orderCount = loggedIn && customer ? customer.orders.length : orders;
 
   const rows: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; sub?: string; go: () => void }[] = [
     { icon: 'package-variant-closed', label: 'My Orders', sub: 'Track, reorder, review', go: () => router.push('/orders') },
+    ...(track.enabled ? [{ icon: 'truck-fast-outline' as const, label: track.title || 'Track order', sub: 'Courier status & tracking number', go: () => router.push('/track') }] : []),
+    ...(coupons.enabled && coupons.showList ? [{ icon: 'ticket-percent-outline' as const, label: coupons.listTitle || 'Coupons', sub: 'Offers you can use', go: () => router.push('/coupons') }] : []),
     { icon: 'heart-outline', label: 'Wishlist', sub: `${wish} saved`, go: () => router.push('/wishlist') },
     { icon: 'history', label: 'Coin History', sub: 'Every coin, in and out', go: () => router.push('/coin-history') },
     { icon: 'crown-outline', label: 'Benefits Club', sub: 'Member perks & free shipping', go: () => router.push('/benefits-club') },
@@ -140,6 +174,7 @@ export default function Profile() {
         Appearance
       </Txt>
       <ThemeSwitch />
+      <EffectsSwitch />
 
       <Txt v="label" color={t.textMute} style={{ marginTop: 24, marginBottom: 6 }}>
         Your account

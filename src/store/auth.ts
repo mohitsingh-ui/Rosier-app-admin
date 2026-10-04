@@ -18,6 +18,18 @@ import { useApp } from './app';
 import { useCoins } from './shop';
 import { storage } from './storage';
 
+export type Shipment = {
+  status: string;
+  /** Latest courier status, e.g. IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED. */
+  latest: string | null;
+  createdAt: string | null;
+  eta: string | null;
+  company: string;
+  number: string;
+  url: string;
+  events: { at: string; status: string }[];
+};
+
 export type ShopOrder = {
   id: string;
   name: string;
@@ -29,6 +41,9 @@ export type ShopOrder = {
   statusPageUrl: string;
   total: number;
   subtotal: number;
+  shipping?: number;
+  address?: string;
+  shipments?: Shipment[];
   items: { title: string; variant: string; qty: number; price: number; total: number; image: string; productId: string | null; variantId: string | null }[];
 };
 
@@ -81,6 +96,10 @@ export const useShopifyFlags = () => useRemote((s) => s.shopify);
 export const getShopifyFlags = () => useRemote.getState().shopify;
 
 const api = () => useRemote.getState().preview?.api || API_URL;
+
+export async function apiPost<T>(path: string, body: object): Promise<T> {
+  return post<T>(path, body);
+}
 
 async function post<T>(path: string, body: object, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(`${api()}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
@@ -183,9 +202,9 @@ export function creditNewOrders(): { order: ShopOrder; coins: number }[] {
 }
 
 /** Shopify cart checkout with the customer logged in (falls back to guest). */
-export async function createCheckout(lines: { variantId: number; qty: number }[], discountCode?: string) {
+export async function createCheckout(lines: { variantId: number; qty: number }[], discountCodes: string[] = []) {
   const token = await validToken();
-  const r = await post<{ checkoutUrl: string }>('/api/checkout', { lines, discountCode }, token ? { 'X-Customer-Token': token } : {});
+  const r = await post<{ checkoutUrl: string }>('/api/checkout', { lines, discountCodes }, token ? { 'X-Customer-Token': token } : {});
   return { url: r.checkoutUrl, loggedIn: !!token };
 }
 

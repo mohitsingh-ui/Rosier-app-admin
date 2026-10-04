@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Coin } from '../../components/Coin';
+import { CouponBox } from '../../components/CouponBox';
 import { SwipeRow } from '../../components/SwipeRow';
 import { toast } from '../../components/Toast';
 import { Button, CountUp, EmptyState, Img, PressableScale, QtyStepper, Txt } from '../../components/ui';
@@ -16,6 +17,7 @@ import { success, tap, warn } from '../../lib/haptics';
 import { useApp } from '../../store/app';
 import { creditNewOrders, loadCustomer, login, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCart, useCoins, useOrders } from '../../store/shop';
+import { useCoupon, useCouponCheck } from '../../store/coupon';
 import { fonts, useTheme } from '../../theme';
 
 function Line({ line }: { line: CartLine }) {
@@ -102,6 +104,17 @@ export default function Cart() {
 
   const count = sum.lines.reduce((n, l) => n + l.qty, 0);
 
+  // Coupon code (checked with Shopify against these exact items).
+  const couponCode = useCoupon((s) => s.code);
+  const couponsOn = useContent('coupons').enabled;
+  const checkLines = sum.selected.map((l) => ({ variantId: l.variantId, qty: l.qty }));
+  const couponCheck = useCouponCheck(couponsOn ? couponCode : null, checkLines, sum.subtotal - sum.voucherValue);
+  const couponSaving = couponCheck?.state === 'ok' ? Math.min(couponCheck.saving, sum.total) : 0;
+  const couponUsable = !!couponCode && couponsOn && couponCheck?.state !== 'invalid';
+  const toPay = Math.max(0, sum.total - couponSaving);
+  const coinsEarned = couponSaving ? coinsForAmount(Math.max(0, sum.subtotal - sum.voucherValue - couponSaving)) : sum.coins;
+  const codes = [sum.voucherOk ? sum.voucher!.code : '', couponUsable ? couponCode! : ''].filter(Boolean);
+
   const checkout = async (skipLoginPrompt = false) => {
     if (!sum.selected.length) return toast('Select at least one item', 'info');
     if (flags.loginEnabled && !loggedIn && !skipLoginPrompt) {
@@ -112,8 +125,24 @@ export default function Cart() {
     const before = new Set((useAuth.getState().customer?.orders ?? []).map((o) => o.id));
     const r = await openCheckout(
       sum.selected.map((l) => ({ variantId: l.variantId, qty: l.qty })),
-      sum.voucherOk ? sum.voucher!.code : undefined,
+      codes,
     );
+    if (r.inApp) {
+      // Checkout ran inside the app, so we know exactly what happened.
+      if (!r.completed) return toast('Checkout closed. Your cart is saved.', 'info');
+      if (r.loggedIn) {
+        const c = await loadCustomer();
+        creditNewOrders();
+        const fresh = (c?.orders ?? []).find((o) => !before.has(o.id) && !o.cancelled);
+        if (fresh) return finishOrder(fresh.name.replace(/^#/, ''), coinsForAmount(fresh.subtotal || fresh.total), false);
+        // Shopify can take a moment to list it — coins get added automatically when it shows up.
+        const pendingId = (r.orderId ? String(r.orderId).split('/').pop()?.split('?')[0] : '') || 'new';
+        return finishOrder(pendingId, coinsEarned, false);
+      }
+      // Guest (or order not listed yet): record it here and give pending coins.
+      const id = (r.orderId ? String(r.orderId).split('/').pop()?.split('?')[0] : '') || String(Math.floor(10000 + Math.random() * 89999));
+      return finishOrder(id, coinsEarned, true);
+    }
     if (r.mode === 'shopify' && r.loggedIn) {
       // Logged in: check Shopify for the new order instead of asking.
       const c = await loadCustomer();
@@ -123,12 +152,35 @@ export default function Cart() {
       const coins = coinsForAmount(fresh.subtotal || fresh.total);
       const id = fresh.name.replace(/^#/, '');
       if (sum.voucherOk) useCoins.getState().consumeVoucher();
+      useCoupon.getState().clear();
       useCart.getState().removeSelected();
       useApp.getState().pushNotification('Order placed 🎉', `${coins} Rosier Coins are on their way for order #${id}.`, { link: 'app:/orders' });
       router.push({ pathname: '/order-success', params: { id, coins: String(coins) } });
       return;
     }
     setConfirm(true);
+  };
+
+  /** Clears the cart, uses up the voucher and shows the thank-you screen. */
+  const finishOrder = (id: string, coins: number, recordLocally: boolean) => {
+    if (recordLocally) {
+      useOrders.getState().addOrder({
+        id,
+        time: Date.now(),
+        items: sum.selected.map((l) => ({ handle: l.product.handle, title: l.product.title, variant: l.variant.title, qty: l.qty, price: l.variant.price, image: l.product.images[0] })),
+        subtotal: sum.subtotal,
+        voucher: sum.voucherValue + couponSaving,
+        total: toPay,
+        coins,
+        status: 'Placed',
+      });
+      useCoins.getState().addPending(coins, id);
+    }
+    if (sum.voucherOk) useCoins.getState().consumeVoucher();
+    useCoupon.getState().clear();
+    useCart.getState().removeSelected();
+    useApp.getState().pushNotification('Order placed 🎉', `${coins} Rosier Coins are on their way for order #${id}.`, { link: 'app:/orders' });
+    router.push({ pathname: '/order-success', params: { id, coins: String(coins) } });
   };
 
   const loginThenCheckout = async () => {
@@ -150,15 +202,16 @@ export default function Cart() {
       time: Date.now(),
       items: sum.selected.map((l) => ({ handle: l.product.handle, title: l.product.title, variant: l.variant.title, qty: l.qty, price: l.variant.price, image: l.product.images[0] })),
       subtotal: sum.subtotal,
-      voucher: sum.voucherValue,
-      total: sum.total,
-      coins: sum.coins,
+      voucher: sum.voucherValue + couponSaving,
+      total: toPay,
+      coins: coinsEarned,
       status: 'Placed',
     });
-    useCoins.getState().addPending(sum.coins, id);
+    useCoins.getState().addPending(coinsEarned, id);
     if (sum.voucherOk) useCoins.getState().consumeVoucher();
+    useCoupon.getState().clear();
     useCart.getState().removeSelected();
-    useApp.getState().pushNotification('Order placed 🎉', `${sum.coins} Rosier Coins are on their way for order #${id}.`);
+    useApp.getState().pushNotification('Order placed 🎉', `${coinsEarned} Rosier Coins are on their way for order #${id}.`);
     setConfirm(false);
     router.push({ pathname: '/order-success', params: { id } });
   };
@@ -241,19 +294,22 @@ export default function Cart() {
           )}
         </Animated.View>
 
+        <CouponBox check={couponCheck} subtotal={sum.subtotal - sum.voucherValue} />
+
         {/* Bill */}
         <Animated.View layout={LinearTransition} style={{ marginTop: 16, backgroundColor: t.cardStrong, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: t.border }}>
           <Text style={{ fontFamily: fonts.serif, fontSize: 18, color: t.heading, marginBottom: 6 }}>Bill details</Text>
           <Row label="Item total (MRP)" value={rupee(sum.mrp, true)} />
           {sum.savings > 0 && <Row label="Rosier offer" value={`− ${rupee(sum.savings, true)}`} color={t.green} />}
           {sum.voucherValue > 0 && <Row label="Coins voucher" value={`− ${rupee(sum.voucherValue, true)}`} color={t.green} />}
+          {couponSaving > 0 && <Row label={`Coupon (${couponCheck!.code})${couponCheck!.confirmed ? '' : ' · est.'}`} value={`− ${rupee(couponSaving, true)}`} color={t.green} />}
           <Row label="Shipping" value="At checkout" />
           <View style={{ height: 1, backgroundColor: t.border, marginVertical: 8 }} />
-          <Row label="To pay" value={rupee(sum.total, true)} bold />
-          {sum.savings + sum.voucherValue > 0 && (
+          <Row label="To pay" value={rupee(toPay, true)} bold />
+          {sum.savings + sum.voucherValue + couponSaving > 0 && (
             <View style={{ marginTop: 10, backgroundColor: t.greenSoft, borderRadius: 12, padding: 10, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <MaterialCommunityIcons name="party-popper" size={18} color={t.green} />
-              <Text style={{ fontFamily: fonts.sansMedium, fontSize: 12.5, color: t.green, flex: 1 }}>You're saving {rupee(sum.savings + sum.voucherValue)} on this order</Text>
+              <Text style={{ fontFamily: fonts.sansMedium, fontSize: 12.5, color: t.green, flex: 1 }}>You're saving {rupee(sum.savings + sum.voucherValue + couponSaving)} on this order</Text>
             </View>
           )}
         </Animated.View>
@@ -262,10 +318,10 @@ export default function Cart() {
       {/* Checkout bar */}
       <View style={{ position: 'absolute', left: 16, right: 16, bottom: 104 + Math.max(insets.bottom - 10, 0), backgroundColor: t.deepAlt, borderRadius: 22, padding: 12, paddingLeft: 18, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 12 }}>
         <View style={{ flex: 1 }}>
-          <CountUp value={sum.total} duration={500} format={(n) => rupee(n)} style={{ fontFamily: fonts.serifBold, fontSize: 22, color: '#FBE6CF' }} />
+          <CountUp value={toPay} duration={500} format={(n) => rupee(n)} style={{ fontFamily: fonts.serifBold, fontSize: 22, color: '#FBE6CF' }} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Coin size={14} />
-            <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: '#F3D48B' }}>+{sum.coins} coins on this order</Text>
+            <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: '#F3D48B' }}>+{coinsEarned} coins on this order</Text>
           </View>
         </View>
         <Button label="Checkout" icon="lock-closed" kind="gold" onPress={() => checkout()} style={{ height: 50, paddingHorizontal: 20 }} disabled={!sum.selected.length} />
@@ -303,7 +359,7 @@ export default function Cart() {
             <Coin size={70} spin shine />
             <Txt v="h3" style={{ marginTop: 12, textAlign: 'center' }}>Did your order go through?</Txt>
             <Txt v="body" color={t.textSoft} style={{ textAlign: 'center', marginTop: 6 }}>
-              Confirm and we'll add {sum.coins} Rosier Coins to your wallet. They unlock {COINS.pendingDays} days after your order.
+              Confirm and we'll add {coinsEarned} Rosier Coins to your wallet. They unlock {COINS.pendingDays} days after your order.
             </Txt>
             <Button label="Yes, I placed my order" onPress={placeOrder} style={{ alignSelf: 'stretch', marginTop: 18 }} />
             <Button label="Not yet" kind="ghost" onPress={() => setConfirm(false)} style={{ alignSelf: 'stretch', marginTop: 10 }} />

@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Avatar } from '../components/Avatar';
 import { Coin } from '../components/Coin';
+import { Editable } from '../components/Editable';
 import { RosierLogo } from '../components/Logo';
 import { Img } from '../components/ui';
 import { fill, useContent } from '../config/remote';
@@ -307,6 +308,7 @@ export default function Onboarding() {
       >
         {SLIDES.map((s, i) => (
           <View key={s.id ?? i} style={{ width, paddingTop: insets.top + 50 }}>
+            <Editable id={`onboarding.slides.${(ob.slides as Slide[]).indexOf(s)}`} label={`Intro slide · ${s.title}`} style={{ flex: 1 }}>
             {s.art === 'video_full' && !!s.video && (
               <View style={{ position: 'absolute', top: 0, left: 0, width, height }}>
                 <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={height} muteTop={insets.top + 12} />
@@ -355,6 +357,7 @@ export default function Onboarding() {
                 </Text>
               </Animated.View>
             )}
+            </Editable>
           </View>
         ))}
       </Animated.ScrollView>

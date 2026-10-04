@@ -180,11 +180,11 @@ export function ScreenHeader({ title, right, transparent }: { title?: string; ri
 
 /* ───────── Section header ───────── */
 
-export function SectionHeader({ title, action, onAction, style }: { title: string; action?: string; onAction?: () => void; style?: StyleProp<ViewStyle> }) {
+export function SectionHeader({ title, action, onAction, style, titleStyle }: { title: string; action?: string; onAction?: () => void; style?: StyleProp<ViewStyle>; titleStyle?: StyleProp<TextStyle> }) {
   const t = useTheme();
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }, style]}>
-      <Txt v="h2">{title}</Txt>
+      <Txt v="h2" style={titleStyle}>{title}</Txt>
       {action && (
         <Pressable onPress={onAction} hitSlop={10}>
           <Text style={{ fontFamily: fonts.serifRegular, color: t.heading, fontSize: 15 }}>{action}</Text>

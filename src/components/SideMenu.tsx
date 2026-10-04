@@ -18,6 +18,8 @@ const ITEMS: { label: string; icon: ReactNode; go: () => void }[] = [
   { label: 'Benefit Club', icon: <MaterialCommunityIcons name="crown-outline" size={30} />, go: () => router.push('/benefits-club') },
   { label: 'Account', icon: <MaterialCommunityIcons name="account-edit-outline" size={30} />, go: () => router.push('/account') },
   { label: 'Orders', icon: <MaterialCommunityIcons name="package-variant-closed" size={30} />, go: () => router.push('/orders') },
+  { label: 'Track Order', icon: <MaterialCommunityIcons name="truck-fast-outline" size={30} />, go: () => router.push('/track') },
+  { label: 'Coupons', icon: <MaterialCommunityIcons name="ticket-percent-outline" size={30} />, go: () => router.push('/coupons') },
   { label: 'Help & Support', icon: <Ionicons name="heart-outline" size={30} />, go: () => router.push('/help') },
   { label: 'Blog & Articles', icon: <MaterialCommunityIcons name="newspaper-variant-outline" size={30} />, go: () => router.push('/blog') },
   { label: 'Our Story', icon: <MaterialCommunityIcons name="sprout-outline" size={30} />, go: () => router.push('/about') },
