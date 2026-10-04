@@ -37,6 +37,8 @@ const TYPE_TO_CAT: Record<string, CategoryId> = {
 
 type CatalogState = {
   products: Product[];
+  /** Products added from a website page (e.g. Gift Hampers) — kept even if not in the app's list. */
+  pinned?: string[];
   updatedAt: number;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -150,6 +152,7 @@ export const useCatalog = create<CatalogState>()(
           let final = merged;
           if (rules?.mode === 'pick') {
             const keep = new Set([...(rules.show ?? []), getContent('benefits').membershipHandle || 'membership']);
+            for (const h of get().pinned ?? []) keep.add(h);
             final = merged.filter((p) => keep.has(p.handle));
           } else if (rules?.hide?.length) {
             const hide = new Set(rules.hide);
@@ -163,9 +166,39 @@ export const useCatalog = create<CatalogState>()(
         }
       },
     }),
-    { name: 'rosier-catalog', storage, partialize: ({ products, updatedAt }) => ({ products, updatedAt }) },
+    { name: 'rosier-catalog', storage, partialize: ({ products, updatedAt, pinned }) => ({ products, updatedAt, pinned }) },
   ),
 );
+
+/** Turns a website product (/products/<handle>.js shape) into an app product. */
+export function productFromWeb(r: any): Product | null {
+  const variants = mapVariants(r);
+  if (!variants.length) return null;
+  const body = clean(r.body_html);
+  return {
+    handle: r.handle,
+    title: r.title,
+    category: TYPE_TO_CAT[r.product_type] ?? 'combos',
+    type: r.product_type,
+    badge: '🎁 Gift',
+    rating: 4.8,
+    short: body.split(/(?<=[.!])\s/).slice(0, 2).join(' ').slice(0, 220),
+    description: body.slice(0, 1200),
+    variants,
+    images: (r.images ?? []).slice(0, 6).map((i: any) => i.src),
+    tags: [],
+  } as Product;
+}
+
+/** Makes sure a website product is in the app catalogue (so it can go in the cart). */
+export async function ensureProduct(handle: string, load: (h: string) => Promise<any>): Promise<Product | null> {
+  const have = useCatalog.getState().products.find((p) => p.handle === handle);
+  if (have) return have;
+  const p = productFromWeb(await load(handle));
+  if (!p) return null;
+  useCatalog.setState((s) => ({ products: [...s.products.filter((x) => x.handle !== p.handle), p], pinned: [...new Set([...(s.pinned ?? []), p.handle])] }));
+  return p;
+}
 
 type Override = { handle: string; hidden?: boolean; title?: string; badge?: string; category?: string; rating?: number; image?: string };
 
