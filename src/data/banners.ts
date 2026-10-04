@@ -55,21 +55,65 @@ function nearestHref(html: string, at: number): string {
   return last[1];
 }
 
+/** Best URL from a srcset list (largest width). */
+function bestOf(srcset: string): string | null {
+  const best = srcset
+    .split(',')
+    .map((p) => p.trim().split(/\s+/))
+    .map(([u, w]) => ({ u, w: parseInt(w, 10) || 0 }))
+    .filter((c) => c.u)
+    .sort((a, b) => b.w - a.w)[0];
+  return best ? abs(best.u) : null;
+}
+
+/**
+ * The website's phone banner for a slide. The theme puts it in
+ * <picture><source media="(max-width: 767px)" srcset="…mobile…"><img …desktop…></picture>,
+ * so look for a max-width <source> inside the same <picture> as the image.
+ */
+function mobileUrl(before: string): string | null {
+  const pic = before.lastIndexOf('<picture');
+  if (pic < 0 || before.lastIndexOf('</picture>') > pic) return null;
+  for (const m of before.slice(pic).matchAll(/<source\b[^>]*>/gi)) {
+    const tag = m[0];
+    if (!/media="[^"]*max-width/i.test(tag)) continue;
+    const set = tag.match(/\s(?:data-)?srcset="([^"]+)"/i)?.[1];
+    const url = set && bestOf(set);
+    if (url) return url;
+  }
+  return null;
+}
+
+/** The link of a slide: the first <a href> between the start of the slide and its image. */
+function slideHref(html: string, at: number): string {
+  const from = html.lastIndexOf('data-slide=', at);
+  const chunk = from >= 0 && at - from < 6000 ? html.slice(from, at) : html.slice(Math.max(0, at - 2500), at);
+  return chunk.match(/<a\b[^>]*href="([^"#]+)"/i)?.[1] ?? nearestHref(html, at);
+}
+
 /** Reads the hero slider (+ the club tiles under it) from rosierfoods.com's homepage. */
 export function parseHomepage(html: string) {
   const slides: LiveBanner[] = [];
   const seen = new Set<string>();
   const altRe = /<img\b[^>]*alt="slider image ([^"]*)"[^>]*>/gi;
   const byBlock = new Map<string, { image: string; href: string; mobile: boolean }[]>();
+  let mobileAspect = 0;
   for (const m of html.matchAll(altRe)) {
     const tag = m[0];
+    const at = m.index ?? 0;
     const block = m[1].trim();
-    const url = imgUrl(tag);
+    const before = html.slice(Math.max(0, at - 4000), at);
+    // Phone-size banner uploaded on the website wins over the desktop one.
+    const phone = mobileUrl(before);
+    const url = phone ?? imgUrl(tag);
     if (!url) continue;
-    const ctx = html.slice(Math.max(0, (m.index ?? 0) - 400), m.index ?? 0).toLowerCase();
-    const mobile = /mobile/.test(tag.toLowerCase()) || /mobile/.test(ctx.slice(-200));
+    if (phone && !mobileAspect) {
+      const r = Number(before.match(/--aspect-ratio-mobile:\s*([\d.]+)/g)?.pop()?.split(':')[1]);
+      if (r > 0.3 && r < 4) mobileAspect = r;
+    }
+    const mobile = !!phone || /mobile/.test(tag.toLowerCase());
     const list = byBlock.get(block) ?? [];
-    list.push({ image: url, href: nearestHref(html, m.index ?? 0), mobile });
+    list.push({ image: url, href: slideHref(html, at), mobile });
     byBlock.set(block, list);
   }
   for (const [block, imgs] of byBlock) {
@@ -99,7 +143,7 @@ export function parseHomepage(html: string) {
       }
     }
   }
-  return { slides, tiles };
+  return { slides, tiles, mobileAspect };
 }
 
 export const useBanners = create<BannerState>()(
@@ -113,8 +157,8 @@ export const useBanners = create<BannerState>()(
         try {
           const res = await fetch(storeFetchUrl('/'), { headers: { Accept: 'text/html' } });
           const html = await res.text();
-          const { slides, tiles } = parseHomepage(html);
-          if (slides.length || tiles.length) set({ slides, tiles, updatedAt: Date.now() });
+          const { slides, tiles, mobileAspect } = parseHomepage(html);
+          if (slides.length || tiles.length) set({ slides, tiles, updatedAt: Date.now(), ...(mobileAspect ? { aspect: mobileAspect } : {}) });
         } catch {
           // Offline — keep the last banners we saw.
         }
@@ -143,6 +187,6 @@ export function routeForHref(href: string): { pathname: string; params?: Record<
     combo: 'combos',
   };
   if (col && map[col]) return { pathname: '/collection/[id]', params: { id: map[col] } };
-  if (col === 'all' || col === 'all-products') return { pathname: '/shop' };
+  if (col === 'all' || col === 'all-products' || col === 'best-sellers') return { pathname: '/shop' };
   return { web: path || '/' };
 }
