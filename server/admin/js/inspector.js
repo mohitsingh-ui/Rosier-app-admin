@@ -159,6 +159,14 @@ function partsFor(id) {
   if (id === 'home.header') return { title: 'Header & search bar', parts: [{ key: 'home', path: [], title: 'Text', fields: pick(fieldsAt('home', []), ['searchPlaceholder']) }, themeColours(['header', 'cardStrong', 'text', 'textSoft', 'textMute'])] };
   if ((m = id.match(/^categories\.items\.(\d+)$/)))
     return { title: 'Category', parts: [{ key: 'categories', path: ['items', Number(m[1])], title: 'This category', fields: fieldsAt('categories', ['items', 0]) }, layout(['categoryTile', 'categoryIcon'], 'All category tiles')] };
+  if ((m = id.match(/^home\.quickTabs\.(\d+)$/)))
+    return {
+      title: 'Tab above the banner',
+      parts: [
+        { key: 'home', path: ['quickTabs', Number(m[1])], title: 'This tab', fields: fieldsAt('home', ['quickTabs', 0]) },
+        { key: 'home', path: [], title: 'All tabs', fields: pick(fieldsAt('home', []), ['quickTabsShow', 'quickTabWidth', 'quickTabHeight']) },
+      ],
+    };
   // A whole section, e.g. the coupon box in the cart.
   if (sectionDef(id)) return { title: sectionDef(id).title, parts: [{ key: id, path: [], title: sectionDef(id).title, fields: fieldsAt(id, []) }] };
   if (id === 'theme.cards')

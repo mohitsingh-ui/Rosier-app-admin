@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { currentEditor, imagesPage, sectionPage, teamPage, versionsPage } from './pages.js';
 import { consolePage, customersPage, ordersPage, shopifyPage } from './shopify.js';
 import { mountPreview, previewHide, previewRefresh } from './preview.js';
+import { appProductsPage, dashboardPage, pushPage } from './growth.js';
 import { inspectorFlush } from './inspector.js';
 import { openModal } from './pickers.js';
 import { changedKeys, loadContent, loadProducts, onChange, sectionDef, state } from './store.js';
@@ -116,6 +117,10 @@ function paintNav() {
     state.schema.map((s) => navLink(`#/section/${s.key}`, s.icon || 'file-outline', s.title, state.sections[s.key]?.changed ? h('span', { class: 'dot', title: 'Unpublished changes' }) : null)),
   );
   fill(shell.navBottom, 
+    h('p', { class: 'nav-title' }, 'Growth'),
+    navLink('#/dashboard', 'chart-box-outline', 'App sales'),
+    navLink('#/push', 'cellphone-message', 'Push notifications'),
+    navLink('#/app-products', 'package-variant', 'Products in the app'),
     h('p', { class: 'nav-title' }, 'Shopify'),
     navLink('#/shopify', 'shopping-outline', 'Shopify connection'),
     navLink('#/orders', 'package-variant-closed', 'Orders'),
@@ -150,6 +155,9 @@ async function route() {
   else if (kind === 'orders') teardown = ordersPage(main);
   else if (kind === 'customers') teardown = customersPage(main);
   else if (kind === 'api') teardown = consolePage(main);
+  else if (kind === 'dashboard') teardown = dashboardPage(main);
+  else if (kind === 'push') teardown = pushPage(main);
+  else if (kind === 'app-products') teardown = appProductsPage(main);
   else teardown = sectionPage(main, sectionDef(key) ? key : state.schema[0].key);
   paintNav();
   main.scrollTop = 0;
@@ -211,10 +219,12 @@ async function openPublish() {
     btn.disabled = true;
     fill(btn, icon('loading', 'spin'), 'Publishing…');
     try {
-      const { release } = await api.post('/publish', { keys: [...picked], note: note.value.trim() });
+      const { release, pushed } = await api.post('/publish', { keys: [...picked], note: note.value.trim() });
       m.close(true);
       await loadContent();
-      toast(`Published! Version ${release.id} is live. People see it next time they open the app.`);
+      const sent = (pushed || []).reduce((n, p) => n + (p?.sent || 0), 0);
+      const msgs = (pushed || []).filter((p) => p && !p.skipped && !p.error).length;
+      toast(`Published! Version ${release.id} is live.${msgs ? ` ${msgs} notification${msgs > 1 ? 's' : ''} sent to ${sent} phone${sent === 1 ? '' : 's'}.` : ' People see it next time they open the app.'}`);
     } catch (e) {
       toast(e.message, 'error');
       paintBtn();

@@ -13,6 +13,9 @@ import { deleteImage, listImages, MAX_VIDEO_BYTES, serveImage, storeImage } from
 import { listProducts } from './products.js';
 import { SCHEMA, SECTION_KEYS } from './schema.js';
 import * as shopify from './shopify.js';
+import * as push from './push.js';
+import * as analytics from './analytics.js';
+import * as catalog from './catalog.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
@@ -43,18 +46,43 @@ app.use(
   }),
 );
 app.use(compression());
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+// Shopify order webhooks need the raw body to check Shopify's signature, so they come before the JSON parser.
+app.post(
+  '/webhooks/shopify',
+  express.raw({ type: '*/*', limit: '2mb' }),
+  wrap(async (req, res) => {
+    const s = await shopify.getSettings();
+    const secret = s.webhookSecret || s.adminClientSecret;
+    if (!push.verifyWebhook(req.body, req.get('X-Shopify-Hmac-Sha256'), secret)) return res.status(401).end();
+    res.status(200).end(); // answer fast; Shopify retries slow webhooks
+    let payload = {};
+    try {
+      payload = JSON.parse(req.body.toString('utf8'));
+    } catch {
+      return;
+    }
+    const orderId = payload.order_id ?? payload.id;
+    if (orderId) push.checkOrderById(orderId).catch((e) => console.warn('order push failed:', e.message));
+  }),
+);
+
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
-const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const baseUrl = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
 /* ───────── Public ───────── */
 
-app.get('/healthz', (_req, res) => res.json({ ok: true, db: db.kind }));
+app.get('/healthz', (_req, res) => {
+  // The keep-alive ping also runs the order-update check (safety net for webhooks).
+  push.poll().catch(() => {});
+  res.json({ ok: true, db: db.kind });
+});
+setInterval(() => push.poll().catch(() => {}), 5 * 60 * 1000).unref();
 
 // The app (and the web preview) call these from anywhere; no cookies are involved.
-app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store', '/api/track'], (req, res, next) => {
+app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store', '/api/track', '/api/push'], (req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type, X-Customer-Token, If-None-Match');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -101,6 +129,7 @@ async function storeProxy(res, path, type) {
   }
 }
 app.get('/api/store/products.json', wrap((req, res) => storeProxy(res, `/products.json?limit=${Math.min(250, Number(req.query.limit) || 250)}`, 'json')));
+app.get('/api/store/app-products', wrap(async (_req, res) => res.json(await catalog.publicList())));
 app.get('/api/store/home', wrap((_req, res) => storeProxy(res, '/', 'html')));
 
 /* The app itself (web build) for the admin panel's live phone preview. */
@@ -136,14 +165,14 @@ const callbackUrl = (req) => `${baseUrl(req)}/auth/shopify/callback`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 /** A tiny page that sends people back into the app (with a button in case the jump is blocked). */
-function backToApp(res, target, ok) {
+function backToApp(res, target, ok, title) {
   res.set('Cache-Control', 'no-store');
   res.set('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
   res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rosier</title><meta http-equiv="refresh" content="0;url=${esc(target)}">
 <style>body{font-family:system-ui,sans-serif;background:#FBEBD8;color:#3E2415;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:24px}
 a{display:inline-block;margin-top:18px;background:#3E2415;color:#FBE6CF;padding:14px 26px;border-radius:28px;text-decoration:none;font-weight:600}</style></head>
-<body><div><h2>${ok ? 'You’re logged in 🎉' : 'Login didn’t finish'}</h2><p>Taking you back to the Rosier app…</p><a href="${esc(target)}">Open the Rosier app</a></div>
+<body><div><h2>${esc(title || (ok ? 'You’re logged in 🎉' : 'Login didn’t finish'))}</h2><p>Taking you back to the Rosier app…</p><a href="${esc(target)}">Open the Rosier app</a></div>
 <script>location.replace(${JSON.stringify(target)})</script></body></html>`);
 }
 
@@ -177,17 +206,22 @@ app.get(
 
 app.post('/api/auth/ticket', wrap(async (req, res) => res.json(await shopify.redeemTicket(String(req.body?.ticket || '')))));
 app.post('/api/auth/refresh', wrap(async (req, res) => res.json(await shopify.refreshLogin(String(req.body?.refreshToken || '')))));
-app.post('/api/auth/logout', wrap(async (req, res) => res.json({ url: await shopify.logoutUrl(String(req.body?.idToken || '')) })));
+app.post('/api/auth/logout', wrap(async (req, res) => res.json({ url: await shopify.logoutUrl(String(req.body?.idToken || ''), baseUrl(req), String(req.body?.redirect || '')) })));
 app.get('/api/customer/me', wrap(async (req, res) => res.json(await shopify.customerProfile(req.get('X-Customer-Token')))));
 app.post(
   '/api/checkout',
   wrap(async (req, res) => {
-    const { lines, discountCode, discountCodes, note } = req.body || {};
+    const { lines, discountCode, discountCodes, note, deviceId } = req.body || {};
     const settings = await shopify.publicShopify();
     if (!settings.cartCheckout) return res.status(503).json({ error: 'In-app checkout is switched off' });
-    res.json(await shopify.createCheckout({ lines, discountCode, discountCodes, note, customerAccessToken: req.get('X-Customer-Token') || undefined }));
+    res.json(await shopify.createCheckout({ lines, discountCode, discountCodes, note, deviceId, customerAccessToken: req.get('X-Customer-Token') || undefined }));
   }),
 );
+
+/* Phone notifications + app usage (public, called by the app). */
+app.post('/api/push/register', wrap(async (req, res) => res.json(await push.register(req.body || {}))));
+app.post('/api/push/unregister', wrap(async (req, res) => (await push.unregister(String(req.body?.token || '')), res.json({ ok: true }))));
+app.post('/api/app/ping', wrap(async (req, res) => res.json(await analytics.ping(req.body || {}))));
 
 /** Simple per-IP limit so codes and order numbers can't be guessed in bulk. */
 function limit(max, windowMs) {
@@ -293,7 +327,9 @@ admin.post(
   wrap(async (req, res) => {
     const release = await content.publish(req.body?.keys, req.body?.note, req.admin.email);
     if (!release) return res.status(400).json({ error: 'Nothing to publish' });
-    res.json({ release });
+    // Notifications / member updates marked "also send to phones" go out now (once each).
+    const pushed = await push.afterPublish().catch(() => []);
+    res.json({ release, pushed });
   }),
 );
 
@@ -349,6 +385,26 @@ admin.get(
 admin.put('/shopify/settings', wrap(async (req, res) => res.json({ settings: await shopify.saveSettings(req.body || {}, req.admin.email) })));
 admin.post('/shopify/test/:kind', wrap(async (req, res) => res.json({ message: await shopify.testConnection(req.params.kind) })));
 admin.get('/shopify/orders', wrap(async (req, res) => res.json(await shopify.adminOrders({ search: String(req.query.search || ''), after: req.query.after || null }))));
+admin.post(
+  '/shopify/webhooks',
+  wrap(async (req, res) => {
+    const r = await push.registerWebhooks(`${baseUrl(req)}/webhooks/shopify`);
+    const bad = r.filter((x) => !x.ok);
+    if (bad.length === r.length) throw new shopify.ShopifyError(`Shopify said: ${bad[0].note}`, 400);
+    res.json({ message: bad.length ? `Partly on. Not allowed: ${bad.map((b) => b.topic).join(', ')} (${bad[0].note})` : 'Instant order updates are on.', results: r });
+  }),
+);
+admin.get('/push', wrap(async (_req, res) => res.json({ stats: await push.stats(), history: await push.history(), sounds: push.SOUNDS })));
+admin.post(
+  '/push/send',
+  wrap(async (req, res) => {
+    const { title, body, link, audience } = req.body || {};
+    res.json(await push.campaign({ title, body, link, audience, by: req.admin.email }));
+  }),
+);
+admin.get('/app-products', wrap(async (_req, res) => res.json(await catalog.adminView())));
+admin.put('/app-products', wrap(async (req, res) => res.json(await catalog.saveSetting(req.body || {}, req.admin.email))));
+admin.get('/analytics', wrap(async (req, res) => res.json(await analytics.dashboard(Number(req.query.days) || 7))));
 admin.get('/shopify/discounts', wrap(async (_req, res) => res.json({ codes: await shopify.adminDiscountCodes() })));
 admin.get('/shopify/customers', wrap(async (req, res) => res.json(await shopify.adminCustomers({ search: String(req.query.search || ''), after: req.query.after || null }))));
 admin.post(
@@ -393,7 +449,12 @@ app.use('/api/admin', admin);
 /* ───────── Admin panel (static) ───────── */
 
 app.use('/admin', express.static(path.resolve(here, '../admin'), { index: 'index.html', maxAge: '5m' }));
-app.get('/', (_req, res) => res.redirect('/admin/'));
+app.get('/', (req, res) => {
+  // Coming back from Shopify sign-out → back into the app.
+  const back = shopify.appAfterLogout(req.query.state);
+  if (back) return backToApp(res, `${back}${back.includes('?') ? '&' : '?'}logged_out=1`, true, 'You’re logged out');
+  res.redirect('/admin/');
+});
 
 app.use((err, _req, res, _next) => {
   if (err instanceof shopify.ShopifyError) return res.status(err.status >= 400 && err.status < 600 ? err.status : 502).json({ error: err.message });

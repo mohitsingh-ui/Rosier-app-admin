@@ -173,6 +173,26 @@ export function sectionPage(root, key) {
       ),
     );
   }
+  if (key === 'push') {
+    extras.push(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost',
+          title: 'Plays the chosen notification sound',
+          onclick: () => {
+            const snd = doc.sound || 'chime';
+            if (snd === 'default') return toast('“Phone’s default” uses each phone’s own sound.', 'info');
+            new Audio(`sounds/rosier_${snd}.wav`).play().catch(() => toast('Your browser blocked the sound — click again.', 'info'));
+          },
+        },
+        icon('play-circle-outline'),
+        'Play sound',
+      ),
+      h('a', { class: 'btn btn-ghost', href: '#/push' }, icon('send-outline'), 'Send a notification'),
+    );
+  }
   if (key === 'coupons') {
     extras.push(
       h(

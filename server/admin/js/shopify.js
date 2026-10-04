@@ -6,7 +6,7 @@ import { add, clear, copyText, debounce, fill, fullDate, h, icon, relTime, toast
 
 const rupee = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
-function pageHead(ic, title, desc, right) {
+export function pageHead(ic, title, desc, right) {
   return h(
     'header',
     { class: 'page-head' },
@@ -69,13 +69,25 @@ const SECTIONS = [
     test: 'admin',
     steps: [
       'Easiest: an existing custom app token (starts with shpat_) — Shopify admin → Settings → Apps → Develop apps → your app → API credentials.',
-      'New apps (since Jan 2026): create an app in the Shopify Dev Dashboard, give it read_orders and read_customers access, install it on your store, then paste its Client ID and Client secret instead.',
+      'New apps (since Jan 2026): create an app in the Shopify Dev Dashboard, give it access, install it on your store, then paste its Client ID and Client secret instead.',
+      'Access (scopes) the app needs: read_orders, read_customers, read_products, read_fulfillments, read_discounts, read_product_listings. After adding scopes, reinstall/update the app on your store.',
     ],
     fields: [
       { key: 'adminToken', type: 'text', label: 'Admin API access token (shpat_…)', help: 'Use this OR the client ID + secret below.' },
       { key: 'adminClientId', type: 'text', label: 'App client ID (Dev Dashboard app)' },
       { key: 'adminClientSecret', type: 'text', label: 'App client secret' },
     ],
+  },
+  {
+    title: 'Instant order notifications',
+    icon: 'bell-ring-outline',
+    action: { label: 'Turn on instant order updates', path: '/shopify/webhooks' },
+    steps: [
+      'Order updates (confirmed, shipped, out for delivery, delivered) are sent to customers’ phones automatically — the app checks Shopify every few minutes.',
+      'For instant updates, press the button below once: it asks Shopify to tell the app the moment an order changes.',
+      'If you use an shpat_ token: paste that app’s “API secret key” below (Shopify signs updates with it). Dev Dashboard apps use their client secret automatically.',
+    ],
+    fields: [{ key: 'webhookSecret', type: 'text', label: 'Webhook signing secret (only for shpat_ tokens)', help: 'Leave empty for Dev Dashboard apps.' }],
   },
 ];
 
@@ -115,6 +127,17 @@ export function shopifyPage(root) {
     }
   }
 
+  async function runAction(a, out) {
+    if (dirty) await save();
+    fill(out, h('span', { class: 'test-result' }, icon('loading', 'spin'), ' Working…'));
+    try {
+      const r = await api.post(a.path);
+      fill(out, h('span', { class: 'test-result ok' }, icon('check-circle'), ` ${r.message}`));
+    } catch (e) {
+      fill(out, h('span', { class: 'test-result bad' }, icon('alert-circle'), ` ${e.message}`));
+    }
+  }
+
   function linkRow(label, value) {
     return h('div', { class: 'copy-row' }, h('span', { class: 'copy-label' }, label), h('code', null, value), h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => copyText(value) }, icon('content-copy'), 'Copy'));
   }
@@ -134,6 +157,7 @@ export function shopifyPage(root) {
           sec.test === 'customer' ? h('div', { class: 'copy-box' }, linkRow('Callback URI', data.callbackUrl), linkRow('Javascript origin / Logout URI', data.backendUrl)) : null,
           renderFields(sec.fields, s, markDirty),
           sec.test ? h('div', { class: 'btn-row test-row' }, h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => test(sec.test, out) }, icon('connection'), 'Test connection'), out) : null,
+          sec.action ? h('div', { class: 'btn-row test-row' }, h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => runAction(sec.action, out) }, icon('flash-outline'), sec.action.label), out) : null,
         ),
       );
     }

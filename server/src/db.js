@@ -82,6 +82,47 @@ async function migrate(db) {
        created_at timestamptz not null default now(),
        created_by text
      )`,
+    // Phones that can get notifications (Expo push tokens).
+    `create table if not exists push_devices (
+       token text primary key,
+       device_id text not null,
+       platform text not null default '',
+       customer_id text,
+       email text,
+       phone text,
+       name text,
+       member boolean not null default false,
+       enabled boolean not null default true,
+       created_at timestamptz not null default now(),
+       last_seen timestamptz not null default now()
+     )`,
+    `create index if not exists push_devices_customer on push_devices (customer_id)`,
+    `create index if not exists push_devices_device on push_devices (device_id)`,
+    // Every notification sent (admin campaigns + order updates), for history and de-duplication.
+    `create table if not exists push_log (
+       id serial primary key,
+       kind text not null,
+       ref text,
+       title text not null,
+       body text not null default '',
+       audience text not null default '',
+       sent int not null default 0,
+       failed int not null default 0,
+       created_at timestamptz not null default now(),
+       created_by text
+     )`,
+    `create unique index if not exists push_log_ref on push_log (kind, ref) where ref is not null`,
+    // App opens, for the app sales dashboard (sessions + live visitors).
+    `create table if not exists app_sessions (
+       id serial primary key,
+       device_id text not null,
+       customer_id text,
+       platform text not null default '',
+       started_at timestamptz not null default now(),
+       last_seen timestamptz not null default now()
+     )`,
+    `create index if not exists app_sessions_started on app_sessions (started_at)`,
+    `create index if not exists app_sessions_device on app_sessions (device_id, last_seen)`,
   ];
   for (const s of stmts) await db.query(s);
 }

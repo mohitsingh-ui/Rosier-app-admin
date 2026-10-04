@@ -19,11 +19,12 @@ export const DEFAULT_SETTINGS = {
   adminToken: '',
   adminClientId: '',
   adminClientSecret: '',
+  webhookSecret: '',
   loginEnabled: false,
   cartCheckout: false,
   requireLogin: false,
 };
-export const SECRET_FIELDS = ['storefrontToken', 'customerClientSecret', 'adminToken', 'adminClientSecret'];
+export const SECRET_FIELDS = ['storefrontToken', 'customerClientSecret', 'adminToken', 'adminClientSecret', 'webhookSecret'];
 
 /* ───────── Settings ───────── */
 
@@ -225,10 +226,26 @@ export const refreshLogin = (refreshToken) => {
   return tokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken });
 };
 
-export async function logoutUrl(idToken) {
+/**
+ * Shopify's sign-out page. After signing out Shopify sends people to `backTo` (must be
+ * the Logout URI saved in Shopify → Customer Account API → Application setup), and we
+ * then hand them back to the app (carried in `state`).
+ */
+export async function logoutUrl(idToken, backTo, appRedirect) {
   const d = await discover().catch(() => null);
   if (!d?.logout || !idToken) return null;
-  return `${d.logout}?${new URLSearchParams({ id_token_hint: idToken })}`;
+  const params = { id_token_hint: idToken };
+  if (backTo) params.post_logout_redirect_uri = backTo;
+  if (backTo && appRedirect && allowedAppRedirect(appRedirect)) params.state = `out.${b64url(appRedirect)}`;
+  return `${d.logout}?${new URLSearchParams(params)}`;
+}
+
+/** The app to return to after Shopify sign-out (from the `state` we sent), or null. */
+export function appAfterLogout(state) {
+  const m = String(state || '').match(/^out\.([\w-]+)$/);
+  if (!m) return null;
+  const u = Buffer.from(m[1], 'base64url').toString();
+  return allowedAppRedirect(u) ? u : null;
 }
 
 /* ───────── Tracking (shared by logged-in orders and guest lookup) ───────── */
@@ -262,6 +279,8 @@ const CUSTOMER_QUERY = `query RosierAppCustomer {
     lastName
     displayName
     imageUrl
+    tags
+    creationDate
     emailAddress { emailAddress }
     phoneNumber { phoneNumber }
     defaultAddress { address1 city zip }
@@ -315,6 +334,8 @@ export async function customerProfile(accessToken) {
     email: c.emailAddress?.emailAddress ?? '',
     phone: c.phoneNumber?.phoneNumber ?? '',
     imageUrl: c.imageUrl ?? '',
+    tags: c.tags ?? [],
+    since: c.creationDate ?? null,
     address: c.defaultAddress ? [c.defaultAddress.address1, c.defaultAddress.city, c.defaultAddress.zip].filter(Boolean).join(', ') : '',
     orders: (c.orders?.nodes ?? []).map((o) => ({
       id: o.id,
@@ -375,7 +396,7 @@ export async function storefront(queryText, variables) {
   return json.data;
 }
 
-export async function createCheckout({ lines, discountCode, discountCodes, customerAccessToken, note }) {
+export async function createCheckout({ lines, discountCode, discountCodes, customerAccessToken, note, deviceId }) {
   const s = await getSettings();
   const clean = (lines ?? [])
     .filter((l) => l && /^\d+$/.test(String(l.variantId)) && Number(l.qty) > 0)
@@ -384,7 +405,7 @@ export async function createCheckout({ lines, discountCode, discountCodes, custo
   const codes = [...new Set([...(Array.isArray(discountCodes) ? discountCodes : []), discountCode].filter(Boolean).map((c) => String(c).trim().slice(0, 60)))].slice(0, 5);
   const input = {
     lines: clean,
-    attributes: [{ key: 'source', value: 'rosier_app' }],
+    attributes: [{ key: 'source', value: 'rosier_app' }, ...(deviceId ? [{ key: 'app_device', value: String(deviceId).slice(0, 80) }] : [])],
     buyerIdentity: { countryCode: s.countryCode || 'IN', ...(customerAccessToken ? { customerAccessToken } : {}) },
     ...(codes.length ? { discountCodes: codes } : {}),
     ...(note ? { note: String(note).slice(0, 500) } : {}),

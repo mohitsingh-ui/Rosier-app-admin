@@ -2226,3 +2226,37 @@ body.inspecting .insp-col { display: block; grid-column: 1; grid-row: 1 / -1; mi
 .color-input.is-empty .swatch { background: repeating-linear-gradient(135deg, #fff 0 6px, #f1e4d2 6px 12px); }
 .color-input.is-empty .swatch::-webkit-color-swatch { opacity: 0; }
 .color-input.is-empty .swatch::-moz-color-swatch { opacity: 0; }
+
+/* ───────── Growth: app sales, push, products ───────── */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; }
+.kpi-label { font-size: 12.5px; color: var(--soft); text-decoration: underline dotted var(--line); text-underline-offset: 4px; }
+.kpi-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.kpi-value { font-size: 24px; font-weight: 600; color: var(--deep); letter-spacing: -0.01em; }
+.kpi-chg { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; font-weight: 500; }
+.kpi-chg.up { color: var(--mint-ink); }
+.kpi-chg.down { color: var(--red); }
+.kpi-chg.flat { color: var(--soft); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+.chart-wrap { position: relative; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--line-2); stroke-width: 1; }
+.chart .axis { fill: var(--soft); font-size: 11px; font-family: var(--font); }
+.chart .bar { fill: var(--brown); }
+.chart .hit { fill: transparent; cursor: crosshair; }
+.chart .hit:hover { fill: rgba(165, 99, 18, 0.06); }
+.chart-tip { position: absolute; top: 8px; transform: translateX(-50%); background: var(--deep); color: #fbe6cf; font-size: 12px; line-height: 1.5; padding: 8px 10px; border-radius: 8px; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-lg); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+.live-pill { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2f9e44; box-shadow: 0 0 0 0 rgba(47, 158, 68, 0.5); animation: live-pulse 1.8s infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(47, 158, 68, 0.45); } 70% { box-shadow: 0 0 0 8px rgba(47, 158, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 158, 68, 0); } }
+.notice { background: var(--yellow); color: var(--yellow-ink); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13.5px; }
+.push-mock { margin-top: 10px; background: #f2f2f4; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; max-width: 360px; font-size: 13.5px; color: #1c1c1e; }
+.push-mock-app { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #6b6b70; letter-spacing: 0.04em; margin-bottom: 4px; }
+.push-mock-app img { width: 18px; height: 18px; border-radius: 5px; }
+.prod-cell { display: flex; align-items: center; gap: 10px; }
+.prod-cell img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; background: var(--sand); }
+.switch-row.compact { min-height: 26px; }
+.small { font-size: 12px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }

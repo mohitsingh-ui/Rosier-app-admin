@@ -105,3 +105,28 @@ Switch to **Use the app** to tap through the app normally. Everything stays a dr
 **Coupons** (admin → Coupons): create the codes in Shopify → Discounts as usual. In the app the cart has a coupon box; every code is checked with Shopify against the customer's actual items (a throwaway cart, nothing ordered), so they see the real saving or "not valid" before checkout. The code goes to Shopify checkout together with any Rosier Coins voucher. "Import from Shopify" fills the "Available coupons" list from your active discounts (needs the `read_discounts` Admin API scope); edit headlines/terms there. If the Storefront API isn't connected the app estimates the saving from this list and Shopify applies the code at checkout.
 
 **Order tracking** (admin → Order tracking): logged-in customers tap Track on any order and see a 5-step timeline, courier name, tracking number, expected delivery date and the courier's history, straight from Shopify fulfilments. Anyone can track with order number + the email or phone used (same check as the website; needs the Admin API with `read_orders`). Lookups and coupon checks are rate-limited per device. If your courier puts tracking numbers but no links into Shopify, set "Courier tracking page" with `{number}`.
+
+## Phone notifications (push)
+
+Admin → **Push notifications** sends a notification now (to everyone / members / logged-in / guests). In **Notifications**, tick "Also send to phones" and it goes out when you publish. **Phone notifications** sets the sound (chime, temple bell, coin, soft notes or the phone's default) and the automatic order messages (confirmed → shipped → out for delivery → delivered / cancelled). Order updates are checked every 5 minutes; Shopify connection → "Turn on instant order updates" makes them instant (webhooks, signed with your app's client secret).
+
+One-time setup (needed for notifications to reach phones):
+1. **Expo project ID** – in the app folder run `npx eas-cli init` once (log in with your Expo account). It adds `extra.eas.projectId` to `app.json` — commit it.
+2. **Firebase (Android)** – console.firebase.google.com → Add project → Add Android app with package `com.rosierfoods.app` → download `google-services.json`. For GitHub builds paste the whole file into a repository secret named `GOOGLE_SERVICES_JSON` (or put the file in the app folder for local builds — it's git-ignored).
+3. **Firebase key for Expo** – Firebase → Project settings → Service accounts → Generate new private key. Upload it at expo.dev → your project → Credentials → Android → FCM V1 service account key.
+4. **iPhone** – the iOS build (EAS) sets up the Apple push key automatically the first time (say yes when asked).
+5. Rebuild the app. The app shows a friendly "Turn on notifications" card on the home screen before the phone asks for permission.
+
+Optional: `EXPO_ACCESS_TOKEN` env on Render if you turn on "enhanced push security" in Expo.
+
+## App sales dashboard
+Admin → **App sales**: sessions, live users in the app right now, sales/orders/AOV/conversion from app orders only (Shopify orders marked `source = rosier_app`), compared with the previous period, daily chart, top products and latest app orders. Needs the Admin API (read_orders).
+
+## Products in the app
+Admin → **Products in the app** lists every Shopify product. "Same as the website" shows the website's products minus the ones you switch off, plus any you switch on that aren't on the website. "Only the products I tick" shows just your picks. Products that aren't on the website must be **Active** and available on your app's sales channel (Shopify → product → Sales channels → the Headless/Storefront channel) so the app can sell them. Needs read_products (+ read_product_listings).
+
+## Membership
+Customers who bought the Membership product (app or website) or have a member tag in Shopify (Benefits Club → member tags) see the member page: their card, days left, savings, free-ghee progress, benefits and **Member updates** (admin → Benefits Club → Member updates; tick "Also send to members' phones" to ping them). They log in with their rosierfoods.com account. The cart shows the member discount only if "Show the member discount in the cart total" is on — switch it on only if Shopify really gives members that discount at checkout.
+
+## Logout
+The app's Logout also signs the customer out of their Shopify account. Make sure Shopify → Customer Account API → Application setup → **Logout URI** is exactly your backend link (e.g. `https://rosier-app-backend.onrender.com`).
