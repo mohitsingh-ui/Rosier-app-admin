@@ -792,5 +792,175 @@
       "imageBannerRadius": 18,
       "sectionSpacing": 1
     }
+  },
+  "effects": {
+    "enabled": false,
+    "userToggle": true,
+    "items": [
+      {
+        "id": "winter",
+        "enabled": true,
+        "name": "Winter snowfall",
+        "type": "snow",
+        "amount": 40,
+        "speed": 1,
+        "size": 1,
+        "opacity": 0.9,
+        "colors": [
+          "#FFFFFF",
+          "#D7ECFB",
+          "#B9DCF5"
+        ],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 0,
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "diwali",
+        "enabled": false,
+        "name": "Diwali sparkles",
+        "type": "sparkles",
+        "amount": 34,
+        "speed": 1,
+        "size": 1,
+        "opacity": 1,
+        "colors": [
+          "#F3D48B",
+          "#FFB703",
+          "#FB8500",
+          "#FFE8A3"
+        ],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 0,
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "diyas",
+        "enabled": false,
+        "name": "Floating diyas",
+        "type": "diyas",
+        "amount": 14,
+        "speed": 1,
+        "size": 1,
+        "opacity": 1,
+        "colors": [],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 0,
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "holi",
+        "enabled": false,
+        "name": "Holi colours",
+        "type": "holi",
+        "amount": 40,
+        "speed": 1,
+        "size": 1,
+        "opacity": 0.85,
+        "colors": [
+          "#FF006E",
+          "#FFBE0B",
+          "#3A86FF",
+          "#8338EC",
+          "#06D6A0",
+          "#FB5607"
+        ],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 0,
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "monsoon",
+        "enabled": false,
+        "name": "Monsoon rain",
+        "type": "rain",
+        "amount": 50,
+        "speed": 1,
+        "size": 1,
+        "opacity": 0.6,
+        "colors": [
+          "#7FA7C9"
+        ],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 0,
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "sale",
+        "enabled": false,
+        "name": "Sale confetti",
+        "type": "confetti",
+        "amount": 45,
+        "speed": 1,
+        "size": 1,
+        "opacity": 1,
+        "colors": [
+          "#A56312",
+          "#F3D48B",
+          "#E76F51",
+          "#2A9D8F",
+          "#E9C46A"
+        ],
+        "emoji": "",
+        "image": "",
+        "screens": "home",
+        "stopAfter": 8,
+        "startAt": "",
+        "endAt": ""
+      }
+    ]
+  },
+  "coupons": {
+    "enabled": true,
+    "boxTitle": "Apply coupon",
+    "placeholder": "Enter coupon code",
+    "listTitle": "Available coupons",
+    "showList": true,
+    "items": [
+      {
+        "id": "example",
+        "enabled": false,
+        "code": "WELCOME10",
+        "title": "10% off your first order",
+        "description": "For new customers on the Rosier app.",
+        "kind": "percent",
+        "value": 10,
+        "minOrder": 0,
+        "maxDiscount": 0,
+        "startAt": "",
+        "endAt": ""
+      }
+    ]
+  },
+  "tracking": {
+    "enabled": true,
+    "title": "Track your order",
+    "intro": "Enter your order number and the email or phone number you used when ordering.",
+    "orderLabel": "Order number",
+    "contactLabel": "Email or phone",
+    "help": "Shipped orders show the courier and tracking number here. Most orders reach you in 3–7 days.",
+    "websiteTrackUrl": "",
+    "steps": {
+      "ordered": "Order placed",
+      "confirmed": "Packed",
+      "shipped": "Shipped",
+      "out": "Out for delivery",
+      "delivered": "Delivered"
+    }
   }
 }

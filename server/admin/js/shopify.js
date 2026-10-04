@@ -42,7 +42,7 @@ const SECTIONS = [
     ],
     fields: [
       { key: 'storefrontToken', type: 'text', label: 'Storefront API public access token', help: 'Stored safely on the server. Only the last 4 characters are shown after saving.' },
-      { key: 'cartCheckout', type: 'boolean', label: 'Use Shopify cart checkout in the app', help: 'Checkout opens with the cart, the coin voucher and (if logged in) the customer’s saved addresses already filled in.' },
+      { key: 'cartCheckout', type: 'boolean', label: 'Use Shopify cart checkout in the app', help: 'Checkout and payment (UPI, cards, wallets, COD) happen inside the app, with the cart, the coin voucher and (if logged in) the customer’s saved address already filled in.' },
     ],
   },
   {

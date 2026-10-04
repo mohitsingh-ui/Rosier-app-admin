@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { currentEditor, imagesPage, sectionPage, teamPage, versionsPage } from './pages.js';
 import { consolePage, customersPage, ordersPage, shopifyPage } from './shopify.js';
 import { mountPreview, previewHide, previewRefresh } from './preview.js';
+import { inspectorFlush } from './inspector.js';
 import { openModal } from './pickers.js';
 import { changedKeys, loadContent, loadProducts, onChange, sectionDef, state } from './store.js';
 import { add, clear, fill, copyText, h, icon, relTime, toast } from './util.js';
@@ -93,7 +94,7 @@ function buildShell() {
   );
   const main = h('main', { class: 'main', id: 'main', tabindex: '-1' });
   fill(appRoot, sidebar, scrim, h('div', { class: 'content' }, topbar, main));
-  mountPreview(appRoot);
+  mountPreview(appRoot, currentEditor);
   shell = { nav, navBottom, main, publishBtn, userEl };
   paintUser();
   paintNav();
@@ -136,6 +137,7 @@ async function route() {
   if (!shell) return;
   const ed = currentEditor();
   if (ed?.dirty) await ed.flush();
+  await inspectorFlush();
   teardown();
   const main = shell.main;
   clear(main);
@@ -167,6 +169,7 @@ window.addEventListener('beforeunload', (e) => {
 
 async function openPublish() {
   const ed = currentEditor();
+  await inspectorFlush();
   if (ed && !(await ed.flush())) return toast("Your latest edits aren't saved yet, so they can't be published. Check your connection and try again.", 'error');
   const keys = changedKeys();
   if (!keys.length) return toast('Everything is already live.', 'info');

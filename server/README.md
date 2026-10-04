@@ -80,3 +80,28 @@ Every editing page shows the real app in a phone frame on the right. It updates 
 **Theme & sizes** controls the app's colours (light and dark) and sizes: slider height and corners, tiles, category icons, deal cards, product photos and section spacing.
 
 The preview is a web copy of the app, stored in `server/app-preview`. After changing the app's code, rebuild it from the project root with `npm run build:preview` and push.
+
+## In-app checkout & payments
+
+With **Use Shopify cart checkout in the app** switched on, checkout opens inside the app using Shopify Checkout Kit. It's the same Shopify checkout as the website, with the same payment methods, shipping rates and discounts, but there's no browser. UPI payments open GPay, PhonePe, Paytm, BHIM or CRED and come back to the app. The app is told the moment an order is paid, so it clears the cart, gives coins and shows the thank-you screen.
+
+Checkout Kit only works in the real installed app (APK / App Store build). In Expo Go and in the admin panel's phone preview, checkout opens in a browser window instead.
+
+## Visual editing in the phone
+
+With **Click to edit** on, the phone preview works like a design tool:
+- **Hover and click** anything (top slider, tiles, header, a section, a category, product cards, an intro slide, or empty space for the whole screen). Its settings open in the **Inspector** next to the phone.
+- **Drag the ↕ handle** under the selected slider, tile row, category, product card or image banner to resize it.
+- **Drag "⠿ Drag"** on a selected home section to move it. You can also use ↑ ↓, duplicate or delete.
+- **+ Add section below** inserts a new section (image banner, product row, grid, promo…).
+- Each section has a background colour, title colour and size, extra space above and below, and an entrance animation with speed. **Play animation** replays it.
+
+Switch to **Use the app** to tap through the app normally. Everything stays a draft until you press Publish.
+
+## Seasonal effects, coupons & order tracking
+
+**Seasonal effects** (admin → Seasonal effects): snow, Diwali sparkles, floating diyas, Holi colours, rain, confetti, petals, hearts, leaves, kites, or your own emoji/image. One main on/off switch, then a list of effects — the first one switched on (and inside its dates) shows. Set dates (e.g. 1 Dec → 31 Jan) and it starts and stops by itself. Choose amount, speed, size, strength, colours, where it shows (Home / main tabs / everywhere) and "stop after N seconds" for a short burst. "Play in live preview" runs it in the phone for 12 s even while it's off. Customers can switch it off in Profile (you can hide that switch). Phones with "reduce motion" turned on don't get effects.
+
+**Coupons** (admin → Coupons): create the codes in Shopify → Discounts as usual. In the app the cart has a coupon box; every code is checked with Shopify against the customer's actual items (a throwaway cart, nothing ordered), so they see the real saving or "not valid" before checkout. The code goes to Shopify checkout together with any Rosier Coins voucher. "Import from Shopify" fills the "Available coupons" list from your active discounts (needs the `read_discounts` Admin API scope); edit headlines/terms there. If the Storefront API isn't connected the app estimates the saving from this list and Shopify applies the code at checkout.
+
+**Order tracking** (admin → Order tracking): logged-in customers tap Track on any order and see a 5-step timeline, courier name, tracking number, expected delivery date and the courier's history, straight from Shopify fulfilments. Anyone can track with order number + the email or phone used (same check as the website; needs the Admin API with `read_orders`). Lookups and coupon checks are rate-limited per device. If your courier puts tracking numbers but no links into Shopify, set "Courier tracking page" with `{number}`.

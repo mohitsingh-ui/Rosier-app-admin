@@ -46,7 +46,8 @@
           "cameraPermission": "Rosier uses your camera so you can take a profile picture.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "./plugins/withPaymentApps"
     ],
     "scheme": "rosier",
     "experiments": {

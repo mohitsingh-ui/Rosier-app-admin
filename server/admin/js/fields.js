@@ -147,17 +147,26 @@ function colorInput(value, set, { label } = {}) {
     text.classList.remove('invalid');
     set(text.value);
   });
+  const wrap = h('div', { class: `color-input ${value ? '' : 'is-empty'}`.trim() }, swatch, text);
+  swatch.addEventListener('input', () => wrap.classList.remove('is-empty'));
   text.addEventListener('input', () => {
     let v = text.value.trim();
-    if (v && !v.startsWith('#')) v = `#${v}`;
+    if (!v) {
+      // Empty = no colour (use the default).
+      text.classList.remove('invalid');
+      wrap.classList.add('is-empty');
+      return set('');
+    }
+    if (!v.startsWith('#')) v = `#${v}`;
     const ok = HEX.test(v);
-    text.classList.toggle('invalid', !!v && !ok);
+    text.classList.toggle('invalid', !ok);
     if (ok) {
+      wrap.classList.remove('is-empty');
       swatch.value = toSix(v);
       set(v.toUpperCase());
     }
   });
-  return h('div', { class: 'color-input' }, swatch, text);
+  return wrap;
 }
 
 function colorField(f, obj, notify) {

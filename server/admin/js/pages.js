@@ -3,7 +3,8 @@ import { api } from './api.js';
 import { renderFields } from './fields.js';
 import { confirmDialog, uploadZone } from './pickers.js';
 import { loadContent, onChange, sectionDef, setSection, state } from './store.js';
-import { previewSection, previewUpdate } from './preview.js';
+import { previewSection, previewTryEffect, previewUpdate } from './preview.js';
+import { pageOpened } from './inspector.js';
 import { add, clear, fill, clone, copyText, debounce, fileSize, fullDate, h, icon, randomId, relTime, toast } from './util.js';
 
 /* ═════════ Section editor ═════════ */
@@ -150,6 +151,65 @@ export function sectionPage(root, key) {
     }
   }
 
+  // Section-specific helpers next to Discard / Reset.
+  const extras = [];
+  if (key === 'effects') {
+    extras.push(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost',
+          title: 'Plays the first switched-on effect in the phone for 12 seconds, even if the main switch is off',
+          onclick: () => {
+            const e = (doc.items || []).find((x) => x && x.enabled) || (doc.items || [])[0];
+            if (!e) return toast('Add an effect first', 'info');
+            previewTryEffect(e);
+            toast(`Playing “${e.name || e.type}” in the phone`, 'info');
+          },
+        },
+        icon('play-circle-outline'),
+        'Play in live preview',
+      ),
+    );
+  }
+  if (key === 'coupons') {
+    extras.push(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost',
+          title: 'Adds your active Shopify discount codes to the list below',
+          onclick: async (ev) => {
+            const b = ev.currentTarget;
+            b.disabled = true;
+            try {
+              const { codes } = await api.get('/shopify/discounts');
+              doc.items = Array.isArray(doc.items) ? doc.items : [];
+              const have = new Set(doc.items.map((c) => String(c.code || '').toLowerCase()));
+              let n = 0;
+              for (const c of codes) {
+                if (have.has(c.code.toLowerCase())) continue;
+                doc.items.push({ id: randomId(), enabled: true, description: '', maxDiscount: 0, ...c });
+                n++;
+              }
+              renderForm();
+              changed();
+              toast(n ? `Added ${n} coupon${n > 1 ? 's' : ''} from Shopify. Check the headlines, then publish.` : codes.length ? 'All your Shopify codes are already in the list.' : 'No active discount codes found in Shopify.', n ? 'ok' : 'info');
+            } catch (e) {
+              toast(e.message, 'error');
+            } finally {
+              b.disabled = false;
+            }
+          },
+        },
+        icon('cloud-download-outline'),
+        'Import from Shopify',
+      ),
+    );
+  }
+
   const row = state.sections[key];
   add(root, 
     h(
@@ -160,11 +220,12 @@ export function sectionPage(root, key) {
         { class: 'page-head' },
         h('div', { class: 'page-title' }, h('span', { class: 'page-icon' }, icon(def.icon || 'file-document-outline')), h('div', null, h('h1', null, def.title), def.description ? h('p', { class: 'page-desc' }, def.description) : null)),
       ),
-      h('div', { class: 'editor-bar' }, status, h('div', { class: 'editor-actions' }, discardBtn, resetBtn)),
+      h('div', { class: 'editor-bar' }, status, h('div', { class: 'editor-actions' }, ...extras, discardBtn, resetBtn)),
       row?.updated_by && row?.changed ? h('p', { class: 'meta-line' }, `Last edited by ${row.updated_by} · ${relTime(row.updated_at)}`) : null,
       formWrap,
     ),
   );
+  pageOpened(key);
   renderForm();
   paintStatus();
   previewSection(key, doc);
@@ -172,6 +233,11 @@ export function sectionPage(root, key) {
 
   current = {
     key,
+    get doc() {
+      return doc;
+    },
+    changed,
+    rerender: renderForm,
     get dirty() {
       return dirty || !!saving;
     },

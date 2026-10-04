@@ -54,7 +54,7 @@ const baseUrl = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get
 app.get('/healthz', (_req, res) => res.json({ ok: true, db: db.kind }));
 
 // The app (and the web preview) call these from anywhere; no cookies are involved.
-app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store'], (req, res, next) => {
+app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store', '/api/track'], (req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type, X-Customer-Token, If-None-Match');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -182,10 +182,45 @@ app.get('/api/customer/me', wrap(async (req, res) => res.json(await shopify.cust
 app.post(
   '/api/checkout',
   wrap(async (req, res) => {
-    const { lines, discountCode, note } = req.body || {};
+    const { lines, discountCode, discountCodes, note } = req.body || {};
     const settings = await shopify.publicShopify();
     if (!settings.cartCheckout) return res.status(503).json({ error: 'In-app checkout is switched off' });
-    res.json(await shopify.createCheckout({ lines, discountCode, note, customerAccessToken: req.get('X-Customer-Token') || undefined }));
+    res.json(await shopify.createCheckout({ lines, discountCode, discountCodes, note, customerAccessToken: req.get('X-Customer-Token') || undefined }));
+  }),
+);
+
+/** Simple per-IP limit so codes and order numbers can't be guessed in bulk. */
+function limit(max, windowMs) {
+  const hits = new Map();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || 'x';
+    const list = (hits.get(key) || []).filter((t) => now - t < windowMs);
+    if (list.length >= max) return res.status(429).json({ error: 'Too many tries. Please wait a few minutes and try again.' });
+    list.push(now);
+    hits.set(key, list);
+    if (hits.size > 5000) hits.clear();
+    next();
+  };
+}
+
+// Is this coupon valid for these items, and how much does it take off?
+app.post(
+  '/api/checkout/coupon',
+  limit(20, 10 * 60 * 1000),
+  wrap(async (req, res) => {
+    const { lines, code } = req.body || {};
+    res.json(await shopify.checkCoupon({ lines, code }));
+  }),
+);
+
+// Guest order tracking: order number + the email or phone used.
+app.post(
+  '/api/track',
+  limit(12, 10 * 60 * 1000),
+  wrap(async (req, res) => {
+    const { order, contact } = req.body || {};
+    res.json(await shopify.trackOrder({ order, contact }));
   }),
 );
 
@@ -314,6 +349,7 @@ admin.get(
 admin.put('/shopify/settings', wrap(async (req, res) => res.json({ settings: await shopify.saveSettings(req.body || {}, req.admin.email) })));
 admin.post('/shopify/test/:kind', wrap(async (req, res) => res.json({ message: await shopify.testConnection(req.params.kind) })));
 admin.get('/shopify/orders', wrap(async (req, res) => res.json(await shopify.adminOrders({ search: String(req.query.search || ''), after: req.query.after || null }))));
+admin.get('/shopify/discounts', wrap(async (_req, res) => res.json({ codes: await shopify.adminDiscountCodes() })));
 admin.get('/shopify/customers', wrap(async (req, res) => res.json(await shopify.adminCustomers({ search: String(req.query.search || ''), after: req.query.after || null }))));
 admin.post(
   '/shopify/graphql',

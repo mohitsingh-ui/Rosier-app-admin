@@ -231,6 +231,28 @@ export async function logoutUrl(idToken) {
   return `${d.logout}?${new URLSearchParams({ id_token_hint: idToken })}`;
 }
 
+/* ───────── Tracking (shared by logged-in orders and guest lookup) ───────── */
+
+const addressLine = (a) => (a ? [a.address1, a.address2, a.city, a.province, a.zip].filter(Boolean).join(', ') : '');
+
+/** One shipment, in the same shape whichever Shopify API it came from. */
+function shipment({ status, latest, createdAt, eta, tracking, events }) {
+  const t = (tracking ?? []).find((x) => x?.number || x?.url) ?? (tracking ?? [])[0] ?? {};
+  return {
+    status: status ?? '',
+    latest: latest ?? null,
+    createdAt: createdAt ?? null,
+    eta: eta ?? null,
+    company: t.company ?? '',
+    number: t.number ?? '',
+    url: t.url ?? '',
+    events: (events ?? [])
+      .filter((e) => e?.happenedAt && e?.status)
+      .map((e) => ({ at: e.happenedAt, status: e.status }))
+      .sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
+  };
+}
+
 /* ───────── Customer Account API: the logged-in customer ───────── */
 
 const CUSTOMER_QUERY = `query RosierAppCustomer {
@@ -255,6 +277,19 @@ const CUSTOMER_QUERY = `query RosierAppCustomer {
         statusPageUrl
         totalPrice { amount currencyCode }
         subtotal { amount currencyCode }
+        totalShipping { amount }
+        shippingAddress { name address1 address2 city province zip }
+        fulfillments(first: 10) {
+          nodes {
+            status
+            createdAt
+            updatedAt
+            estimatedDeliveryAt
+            latestShipmentStatus
+            trackingInformation { company number url }
+            events(first: 30) { nodes { happenedAt status } }
+          }
+        }
         lineItems(first: 30) {
           nodes { title variantTitle quantity productId variantId image { url } price { amount } totalPrice { amount } }
         }
@@ -292,6 +327,18 @@ export async function customerProfile(accessToken) {
       statusPageUrl: o.statusPageUrl,
       total: num(o.totalPrice),
       subtotal: num(o.subtotal ?? o.totalPrice),
+      shipping: num(o.totalShipping),
+      address: addressLine(o.shippingAddress),
+      shipments: (o.fulfillments?.nodes ?? []).map((f) =>
+        shipment({
+          status: f.status,
+          latest: f.latestShipmentStatus,
+          createdAt: f.createdAt,
+          eta: f.estimatedDeliveryAt,
+          tracking: f.trackingInformation,
+          events: f.events?.nodes,
+        }),
+      ),
       items: (o.lineItems?.nodes ?? []).map((li) => ({
         title: li.title,
         variant: li.variantTitle ?? '',
@@ -328,17 +375,18 @@ export async function storefront(queryText, variables) {
   return json.data;
 }
 
-export async function createCheckout({ lines, discountCode, customerAccessToken, note }) {
+export async function createCheckout({ lines, discountCode, discountCodes, customerAccessToken, note }) {
   const s = await getSettings();
   const clean = (lines ?? [])
     .filter((l) => l && /^\d+$/.test(String(l.variantId)) && Number(l.qty) > 0)
     .map((l) => ({ merchandiseId: `gid://shopify/ProductVariant/${l.variantId}`, quantity: Math.min(50, Number(l.qty)) }));
   if (!clean.length) throw new ShopifyError('Your cart is empty.', 400);
+  const codes = [...new Set([...(Array.isArray(discountCodes) ? discountCodes : []), discountCode].filter(Boolean).map((c) => String(c).trim().slice(0, 60)))].slice(0, 5);
   const input = {
     lines: clean,
     attributes: [{ key: 'source', value: 'rosier_app' }],
     buyerIdentity: { countryCode: s.countryCode || 'IN', ...(customerAccessToken ? { customerAccessToken } : {}) },
-    ...(discountCode ? { discountCodes: [String(discountCode)] } : {}),
+    ...(codes.length ? { discountCodes: codes } : {}),
     ...(note ? { note: String(note).slice(0, 500) } : {}),
   };
   const data = await storefront(CART_CREATE, { input });
@@ -349,6 +397,116 @@ export async function createCheckout({ lines, discountCode, customerAccessToken,
   url.searchParams.set('utm_source', 'rosier_app');
   url.searchParams.set('utm_medium', 'app');
   return { checkoutUrl: url.toString(), cartId: r.cart.id, warnings: r.warnings ?? [] };
+}
+
+/* ───────── Coupons: check a code against the customer's real cart ───────── */
+
+const CART_COST = `id discountCodes { code applicable } cost { subtotalAmount { amount } totalAmount { amount } }`;
+
+function cartLines(lines) {
+  return (lines ?? [])
+    .filter((l) => l && /^\d+$/.test(String(l.variantId)) && Number(l.qty) > 0)
+    .slice(0, 50)
+    .map((l) => ({ merchandiseId: `gid://shopify/ProductVariant/${l.variantId}`, quantity: Math.min(50, Number(l.qty)) }));
+}
+
+/**
+ * Builds a throwaway Shopify cart with the customer's items, then adds the code, and
+ * reports whether Shopify accepts it and how much it takes off. Nothing is ordered.
+ */
+export async function checkCoupon({ lines, code }) {
+  const s = await getSettings();
+  const clean = cartLines(lines);
+  const c = String(code ?? '').trim().slice(0, 60);
+  if (!c) throw new ShopifyError('Enter a coupon code.', 400);
+  if (!clean.length) throw new ShopifyError('Your cart is empty.', 400);
+  const created = await storefront(
+    `mutation($input: CartInput!) { cartCreate(input: $input) { cart { ${CART_COST} } userErrors { message } } }`,
+    { input: { lines: clean, buyerIdentity: { countryCode: s.countryCode || 'IN' } } },
+  );
+  const cart0 = created?.cartCreate?.cart;
+  if (!cart0) throw new ShopifyError(created?.cartCreate?.userErrors?.[0]?.message || 'Could not check this code right now.', 502);
+  const updated = await storefront(
+    `mutation($id: ID!, $codes: [String!]!) { cartDiscountCodesUpdate(cartId: $id, discountCodes: $codes) { cart { ${CART_COST} } userErrors { message } } }`,
+    { id: cart0.id, codes: [c] },
+  );
+  const cart1 = updated?.cartDiscountCodesUpdate?.cart;
+  if (!cart1) throw new ShopifyError(updated?.cartDiscountCodesUpdate?.userErrors?.[0]?.message || 'Could not check this code right now.', 502);
+  const hit = (cart1.discountCodes ?? []).find((d) => d.code.toLowerCase() === c.toLowerCase());
+  const before = Number(cart0.cost?.totalAmount?.amount ?? 0);
+  const after = Number(cart1.cost?.totalAmount?.amount ?? 0);
+  return {
+    code: hit?.code ?? c,
+    applicable: !!hit?.applicable,
+    before: Math.round(before),
+    after: Math.round(after),
+    saving: Math.max(0, Math.round(before - after)),
+  };
+}
+
+/* ───────── Guest order tracking (order number + email or phone) ───────── */
+
+const digits = (v) => String(v ?? '').replace(/\D/g, '');
+const samePhone = (a, b) => {
+  const x = digits(a);
+  const y = digits(b);
+  return x.length >= 10 && y.length >= 10 && x.slice(-10) === y.slice(-10);
+};
+
+/**
+ * Looks an order up with the Admin API, but only answers if the email or phone
+ * matches the order — the same check the website's order-status lookup does.
+ */
+export async function trackOrder({ order, contact }) {
+  const num = digits(order);
+  const who = String(contact ?? '').trim().toLowerCase();
+  if (!num || !who) throw new ShopifyError('Enter your order number and the email or phone you ordered with.', 400);
+  const data = await adminData(
+    `query($q: String) {
+      orders(first: 3, query: $q) {
+        nodes {
+          name processedAt cancelledAt displayFulfillmentStatus displayFinancialStatus statusPageUrl email phone
+          customer { defaultEmailAddress { emailAddress } defaultPhoneNumber { phoneNumber } }
+          shippingAddress { address1 address2 city province zip phone }
+          totalPriceSet { shopMoney { amount } }
+          lineItems(first: 30) { nodes { title variantTitle quantity image { url } } }
+          fulfillments(first: 10) {
+            createdAt estimatedDeliveryAt displayStatus status
+            trackingInfo(first: 3) { company number url }
+            events(first: 30) { nodes { happenedAt status } }
+          }
+        }
+      }
+    }`,
+    { q: `name:#${num} OR name:${num}` },
+  );
+  const o = (data?.orders?.nodes ?? []).find((x) => digits(x.name) === num);
+  const emails = [o?.email, o?.customer?.defaultEmailAddress?.emailAddress].filter(Boolean).map((e) => e.toLowerCase());
+  const phones = [o?.phone, o?.customer?.defaultPhoneNumber?.phoneNumber, o?.shippingAddress?.phone].filter(Boolean);
+  const ok = o && (who.includes('@') ? emails.includes(who) : phones.some((p) => samePhone(p, who)));
+  // Same answer whether the order doesn't exist or the contact doesn't match.
+  if (!ok) throw new ShopifyError('We couldn’t find an order with those details. Check the order number and use the email or phone you ordered with.', 404);
+  return {
+    name: o.name,
+    processedAt: o.processedAt,
+    cancelled: !!o.cancelledAt,
+    fulfillmentStatus: o.displayFulfillmentStatus,
+    financialStatus: o.displayFinancialStatus,
+    statusPageUrl: o.statusPageUrl ?? '',
+    total: money(o.totalPriceSet),
+    address: addressLine(o.shippingAddress),
+    items: (o.lineItems?.nodes ?? []).map((l) => ({ title: l.title, variant: l.variantTitle ?? '', qty: l.quantity, image: l.image?.url ?? '' })),
+    shipments: (o.fulfillments ?? []).map((f) =>
+      shipment({
+        status: f.status,
+        latest: f.displayStatus,
+        createdAt: f.createdAt,
+        eta: f.estimatedDeliveryAt,
+        tracking: f.trackingInfo,
+        events: f.events?.nodes,
+      }),
+    ),
+  };
 }
 
 /* ───────── Admin API (admin panel only) ───────── */
@@ -463,6 +621,46 @@ export async function adminCustomers({ search = '', after = null } = {}) {
       tags: x.tags ?? [],
     })),
   };
+}
+
+/** Active discount codes from Shopify, for the admin panel's "Import from Shopify" button. */
+export async function adminDiscountCodes() {
+  const min = `minimumRequirement { __typename ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } } }`;
+  const common = `title status startsAt endsAt codes(first: 1) { nodes { code } }`;
+  let data;
+  try {
+    data = await adminData(`{
+      codeDiscountNodes(first: 50, query: "status:active") {
+        nodes {
+          id
+          codeDiscount {
+            __typename
+            ... on DiscountCodeBasic { ${common} ${min} customerGets { value { __typename ... on DiscountPercentage { percentage } ... on DiscountAmount { amount { amount } } } } }
+            ... on DiscountCodeFreeShipping { ${common} ${min} }
+            ... on DiscountCodeBxgy { ${common} }
+          }
+        }
+      }
+    }`);
+  } catch (e) {
+    if (/access|scope|denied/i.test(e.message)) throw new ShopifyError('Your Shopify app needs the read_discounts permission. Add it in the app’s Admin API scopes, then try again.', 403);
+    throw e;
+  }
+  return (data?.codeDiscountNodes?.nodes ?? [])
+    .map((n) => {
+      const d = n.codeDiscount ?? {};
+      const code = d.codes?.nodes?.[0]?.code;
+      if (!code) return null;
+      const v = d.customerGets?.value;
+      const minOrder = Math.round(Number(d.minimumRequirement?.greaterThanOrEqualToSubtotal?.amount ?? 0));
+      let kind = 'other';
+      let value = 0;
+      if (d.__typename === 'DiscountCodeFreeShipping') kind = 'freeship';
+      else if (v?.__typename === 'DiscountPercentage') (kind = 'percent'), (value = Math.round(Number(v.percentage) * 100));
+      else if (v?.__typename === 'DiscountAmount') (kind = 'flat'), (value = Math.round(Number(v.amount?.amount ?? 0)));
+      return { code, title: d.title || code, kind, value, minOrder, startAt: d.startsAt ?? '', endAt: d.endsAt ?? '' };
+    })
+    .filter(Boolean);
 }
 
 /* ───────── "Test connection" buttons ───────── */
