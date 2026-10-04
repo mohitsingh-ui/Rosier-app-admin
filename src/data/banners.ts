@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { storage } from '../store/storage';
-import { STORE_URL } from './catalog';
+import { STORE_URL, storeFetchUrl } from './catalog';
 
 export type LiveBanner = { id: string; image: string; href: string };
 
@@ -111,7 +111,7 @@ export const useBanners = create<BannerState>()(
       updatedAt: 0,
       refresh: async () => {
         try {
-          const res = await fetch(`${STORE_URL}/`, { headers: { Accept: 'text/html' } });
+          const res = await fetch(storeFetchUrl('/'), { headers: { Accept: 'text/html' } });
           const html = await res.text();
           const { slides, tiles } = parseHomepage(html);
           if (slides.length || tiles.length) set({ slides, tiles, updatedAt: Date.now() });

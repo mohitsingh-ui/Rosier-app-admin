@@ -5,9 +5,14 @@ import { storage } from '../store/storage';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const snapshot: Product[] = require('./catalog.json');
 import type { CategoryId, Product, Variant } from './types';
-import { getContent, useContent } from '../config/remote';
+import { Platform } from 'react-native';
+import { API_URL, getContent, useContent } from '../config/remote';
 
 export const STORE_URL = 'https://www.rosierfoods.com';
+
+/** Browsers can't read rosierfoods.com directly (CORS), so the web preview goes through our backend. */
+export const storeFetchUrl = (path: string) =>
+  Platform.OS === 'web' && API_URL ? `${API_URL}/api/store${path === '/' ? '/home' : path}` : `${STORE_URL}${path}`;
 
 export type Category = { id: CategoryId; label: string; icon: string; image: string; blurb: string; tint: string; enabled: boolean };
 
@@ -83,7 +88,7 @@ export const useCatalog = create<CatalogState>()(
         if (get().loading) return;
         set({ loading: true });
         try {
-          const res = await fetch(`${STORE_URL}/products.json?limit=250`);
+          const res = await fetch(storeFetchUrl('/products.json?limit=250'));
           const json = await res.json();
           const raw: any[] = json.products ?? [];
           const byHandle = new Map(raw.map((p) => [p.handle, p]));

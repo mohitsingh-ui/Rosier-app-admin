@@ -6,6 +6,7 @@
  * whenever it comes back to the foreground, and caches it for offline use.
  */
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { storage } from '../store/storage';
@@ -16,7 +17,15 @@ export type Content = typeof defaults;
 export type SectionKey = keyof Content;
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiUrl?: string };
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || extra.apiUrl || '').replace(/\/$/, '');
+/**
+ * The backend. The web copy of the app (the admin panel's phone preview) is served by
+ * the backend itself, so on web it talks to whatever site it was opened from.
+ */
+const webOrigin = Platform.OS === 'web' && typeof window !== 'undefined' && /^https?:/.test(window.location?.origin ?? '') ? window.location.origin : '';
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || webOrigin || extra.apiUrl || '').replace(/\/$/, '');
+
+/** True when the app runs inside the admin panel's live preview. */
+export const IN_EDITOR = Platform.OS === 'web' && typeof window !== 'undefined' && window.parent !== window && /[?&]editor=1/.test(window.location.search + (window.sessionStorage?.getItem('rosier-editor') ?? ''));
 
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -28,7 +37,7 @@ function merge<T>(base: T, over: unknown): T {
   return out as T;
 }
 
-const build = (remote?: Partial<Content>) => {
+export const build = (remote?: Partial<Content>) => {
   const out = {} as Content;
   for (const k of Object.keys(defaults) as SectionKey[]) (out as any)[k] = merge(defaults[k], remote?.[k]);
   return out;
@@ -70,7 +79,8 @@ export const useRemote = create<RemoteState>()(
       refresh: async () => {
         const { preview } = get();
         const api = preview?.api || API_URL;
-        if (!api || get().loading) return false;
+        // In the admin panel's preview, the editor sends the draft content directly.
+        if (!api || get().loading || IN_EDITOR) return false;
         set({ loading: true });
         try {
           const url = `${api}/api/app/config${preview ? `?preview=${encodeURIComponent(preview.token)}` : ''}`;

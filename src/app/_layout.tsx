@@ -9,6 +9,7 @@ import { Poppins_700Bold } from '@expo-google-fonts/poppins/700Bold';
 import { useFonts } from 'expo-font';
 import { SplashScreen } from 'expo-router';
 import Stack from 'expo-router/stack';
+import { usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
@@ -19,6 +20,7 @@ import { FlyHost } from '../components/FlyToCart';
 import { RemoteGate } from '../components/RemoteGate';
 import { getContent, useRemote } from '../config/remote';
 import { creditNewOrders, hasTokens, loadCustomer } from '../store/auth';
+import { reportRoute, startEditorBridge } from '../lib/editorBridge';
 import { ToastHost } from '../components/Toast';
 import { useBanners } from '../data/banners';
 import { useCatalog } from '../data/catalog';
@@ -66,10 +68,16 @@ export default function RootLayout() {
   const remoteHydrated = useRemoteHydrated();
   const hydrated = appHydrated && remoteHydrated;
   const t = useTheme();
+  const pathname = usePathname();
+  useEffect(() => reportRoute(pathname), [pathname]);
 
   useEffect(() => {
     if (loaded && hydrated) SplashScreen.hideAsync().catch(() => {});
   }, [loaded, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) startEditorBridge();
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;

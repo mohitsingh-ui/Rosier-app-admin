@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
@@ -24,7 +24,11 @@ import { Image } from 'expo-image';
 import { greeting } from '../../lib/format';
 import { useApp } from '../../store/app';
 import { useCoins } from '../../store/shop';
-import { fonts, useTheme } from '../../theme';
+import { fonts, useLayout, useTheme } from '../../theme';
+
+const GREET_H = 58;
+const GREET_GAP = 12;
+const SEARCH_H = 48;
 
 const TOP_TABS = [
   { key: 'rosier', label: 'ROSIER' },
@@ -51,23 +55,31 @@ export default function Home() {
   const refreshBanners = useBanners((s) => s.refresh);
 
   const y = useSharedValue(0);
+  // The header sits on top of the list and only slides/fades (no height changes),
+  // so scrolling never resizes the list underneath — that's what caused the glitching.
+  const topPad = insets.top + 8;
+  const headerH = topPad + GREET_H + GREET_GAP + SEARCH_H + 12;
+  const isIOS = Platform.OS === 'ios';
   const onScroll = useAnimatedScrollHandler((e) => {
-    y.value = e.contentOffset.y;
+    // iOS uses a content inset (so pull-to-refresh shows below the header), which starts the offset at -headerH.
+    y.value = e.contentOffset.y + (isIOS ? headerH : 0);
   });
-  const headerShadow = useAnimatedStyle(() => ({
-    shadowOpacity: interpolate(y.value, [0, 40], [0, 0.15], 'clamp'),
-    elevation: interpolate(y.value, [0, 40], [0, 8], 'clamp'),
+  const headerSlide = useAnimatedStyle(() => ({
+    transform: [{ translateY: -interpolate(y.value, [0, GREET_H + GREET_GAP], [0, GREET_H + GREET_GAP], 'clamp') }],
   }));
   const greetStyle = useAnimatedStyle(() => ({
-    height: interpolate(y.value, [0, 60], [58, 0], 'clamp'),
     opacity: interpolate(y.value, [0, 40], [1, 0], 'clamp'),
-    marginBottom: interpolate(y.value, [0, 60], [12, 0], 'clamp'),
+  }));
+  const shadowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [20, 70], [0, 1], 'clamp'),
   }));
 
   const home = useContent('home');
+  const L = useLayout();
+  const gap = (n: number) => Math.round(n * L.sectionSpacing);
   const general = useContent('general');
   const categories = useCategories();
-  const all = shopProducts(products);
+  const all = useMemo(() => shopProducts(products), [products]);
   const byHandle = (h: string) => all.find((p) => p.handle === h);
   const pick = (handles: string[] = [], category = '') =>
     (handles.length ? (handles.map(byHandle).filter(Boolean) as Product[]) : category ? all.filter((p) => p.category === category) : []);
@@ -81,7 +93,7 @@ export default function Home() {
     [all],
   );
   const cardW = (width - 20 * 2 - 12) / 2;
-  const dealW = Math.min(160, (width - 60) / 3 + 16);
+  const dealW = Math.min(L.dealCardWidth, width * 0.62);
 
   // Top slider: live website banners and/or the banners set in the admin panel.
   type Slide = { web: LiveBanner } | { custom: (typeof home.heroBanners)[number] };
@@ -91,7 +103,8 @@ export default function Home() {
   const hero: Slide[] = home.heroSource === 'custom' ? mine : home.heroSource === 'both' ? [...mine, ...web] : web.length ? web : mine;
   const hasImageSlides = hero.some((x) => 'web' in x || x.custom.kind === 'image');
   const slideW = width - 40;
-  const slideH = hasImageSlides ? Math.round(slideW / bannerAspect) : 212;
+  // Image banners keep their shape (or the ratio set in Theme); colour cards use the card height from Theme.
+  const slideH = hasImageSlides ? Math.round(slideW / (L.heroImageRatio > 0 ? L.heroImageRatio : bannerAspect)) : L.heroCardHeight;
 
   const onTopTab = (k: string) => {
     setTab(k);
@@ -104,9 +117,14 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
+      {/* Covers the status bar so the greeting can slide up behind it */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: topPad, backgroundColor: t.header, zIndex: 11 }} />
       {/* Sticky header */}
-      <Animated.View style={[{ backgroundColor: t.header, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 12, zIndex: 10, shadowColor: '#000', shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }, headerShadow]}>
-        <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }, greetStyle]}>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, height: headerH, backgroundColor: t.header, paddingTop: topPad, paddingHorizontal: 20, zIndex: 10 }, headerSlide]}>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, right: 0, bottom: -10, height: 10 }, shadowStyle]}>
+          <LinearGradient colors={['rgba(60,30,10,0.14)', 'rgba(60,30,10,0)']} style={{ flex: 1 }} />
+        </Animated.View>
+        <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', height: GREET_H, marginBottom: GREET_GAP }, greetStyle]}>
           <PressableScale onPress={() => openMenu(true)}>
             <Avatar size={54} />
           </PressableScale>
@@ -129,7 +147,7 @@ export default function Home() {
           </PressableScale>
         </Animated.View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <PressableScale scaleTo={0.98} onPress={() => router.push('/search')} style={{ flex: 1, height: 48, borderRadius: 24, backgroundColor: t.cardStrong, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10 }}>
+          <PressableScale scaleTo={0.98} onPress={() => router.push('/search')} style={{ flex: 1, height: SEARCH_H, borderRadius: 24, backgroundColor: t.cardStrong, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10 }}>
             <Ionicons name="search" size={20} color={t.textMute} />
             <Text style={{ fontFamily: fonts.sans, fontSize: 14, color: t.textMute, flex: 1 }} numberOfLines={1}>
               {home.searchPlaceholder}
@@ -151,11 +169,23 @@ export default function Home() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 130 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => {
-          refresh();
-          refreshBanners();
-        }} tintColor={t.primary} />}
+        contentContainerStyle={{ paddingBottom: 130, paddingTop: isIOS ? 0 : headerH }}
+        contentInset={isIOS ? { top: headerH } : undefined}
+        contentOffset={isIOS ? { x: 0, y: -headerH } : undefined}
+        scrollIndicatorInsets={isIOS ? { top: headerH } : undefined}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            progressViewOffset={headerH}
+            onRefresh={() => {
+              refresh();
+              refreshBanners();
+            }}
+            tintColor={t.primary}
+          />
+        }
       >
         {/* Sub-brand tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6, paddingTop: 4 }}>
@@ -183,6 +213,7 @@ export default function Home() {
         <View style={{ marginTop: 14 }}>
           <Carousel
             width={width}
+            seconds={L.carouselSeconds}
             slides={[
               home.showCoinsBanner && <CoinsBanner key="coins" width={slideW} height={slideH} />,
               ...hero.map((x, i) =>
@@ -215,13 +246,13 @@ export default function Home() {
             case 'categories':
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title || 'Discover category'} style={{ marginTop: 22 }} />
+                  <SectionHeader title={sec.title || 'Discover category'} style={{ marginTop: gap(22) }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}>
                     {categories.map((c, i) => (
                       <Animated.View key={c.id} entering={FadeInDown.delay(i * 70).springify()}>
-                        <PressableScale onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })} style={{ alignItems: 'center', width: 76 }}>
-                          <View style={{ width: 72, height: 64, borderRadius: 12, backgroundColor: t.mode === 'dark' ? t.card : '#F4E3CF', alignItems: 'center', justifyContent: 'center' }}>
-                            <CategoryIcon name={c.icon} image={c.image} size={44} color={t.mode === 'dark' ? '#D8A15A' : '#7E3F18'} />
+                        <PressableScale onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })} style={{ alignItems: 'center', width: L.categoryTile + 4 }}>
+                          <View style={{ width: L.categoryTile, height: Math.round(L.categoryTile * 0.89), borderRadius: 12, backgroundColor: t.mode === 'dark' ? t.card : '#F4E3CF', alignItems: 'center', justifyContent: 'center' }}>
+                            <CategoryIcon name={c.icon} image={c.image} size={L.categoryIcon} color={t.mode === 'dark' ? '#D8A15A' : '#7E3F18'} />
                           </View>
                           <Text style={{ fontFamily: fonts.serifRegular, fontSize: 15, color: t.heading, marginTop: 6 }} numberOfLines={1}>{c.label}</Text>
                         </PressableScale>
@@ -235,7 +266,7 @@ export default function Home() {
               if (!list.length) return null;
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title || 'Limited deals'} action="see all" onAction={() => router.push({ pathname: '/collection/[id]', params: { id: 'deals' } })} style={{ marginTop: 24 }} />
+                  <SectionHeader title={sec.title || 'Limited deals'} action="see all" onAction={() => router.push({ pathname: '/collection/[id]', params: { id: 'deals' } })} style={{ marginTop: gap(24) }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
                     {list.map((p, i) => (
                       <DealCard key={p.handle} product={p} index={i} width={dealW} />
@@ -246,7 +277,7 @@ export default function Home() {
             }
             case 'benefits':
               return (
-                <View key={sec.id ?? si} style={{ marginTop: 26 }}>
+                <View key={sec.id ?? si} style={{ marginTop: gap(26) }}>
                   <BenefitsBanner width={width} />
                 </View>
               );
@@ -257,7 +288,7 @@ export default function Home() {
                 <View key={sec.id ?? si}>
                   {sec.subtitle ? (
                     <>
-                      <Txt v="h1" style={{ textAlign: 'center', marginTop: 28, marginBottom: 4, fontFamily: fonts.serif, paddingHorizontal: 20 }}>
+                      <Txt v="h1" style={{ textAlign: 'center', marginTop: gap(28), marginBottom: 4, fontFamily: fonts.serif, paddingHorizontal: 20 }}>
                         {sec.title}
                       </Txt>
                       <Txt v="small" color={t.textSoft} style={{ textAlign: 'center', marginBottom: 16, paddingHorizontal: 20 }}>
@@ -266,7 +297,7 @@ export default function Home() {
                     </>
                   ) : (
                     !!sec.title && (
-                      <Txt v="h2" style={{ textAlign: 'center', marginTop: 30, marginBottom: 14, paddingHorizontal: 20 }}>
+                      <Txt v="h2" style={{ textAlign: 'center', marginTop: gap(30), marginBottom: 14, paddingHorizontal: 20 }}>
                         {sec.title}
                       </Txt>
                     )
@@ -291,7 +322,7 @@ export default function Home() {
               const img = resolveImage(sec.image);
               const colors = (sec.colors?.length >= 2 ? sec.colors : ['#FFF4DC', '#F6D98C']) as [string, string, ...string[]];
               return (
-                <View key={sec.id ?? si} style={{ marginTop: 28 }}>
+                <View key={sec.id ?? si} style={{ marginTop: gap(28) }}>
                   <PressableScale scaleTo={0.98} onPress={() => openLink(sec.link)}>
                     <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 20 }}>
                       <View style={{ flex: 1.1, flexDirection: 'row' }}>
@@ -322,7 +353,7 @@ export default function Home() {
               if (!list.length) return null;
               return (
                 <View key={sec.id ?? si}>
-                  <SectionHeader title={sec.title} action="see all" onAction={() => (sec.link ? openLink(sec.link) : router.navigate('/shop'))} style={{ marginTop: 26 }} />
+                  <SectionHeader title={sec.title} action="see all" onAction={() => (sec.link ? openLink(sec.link) : router.navigate('/shop'))} style={{ marginTop: gap(26) }} />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
                     {list.map((p, i) => (
                       <DealCard key={p.handle} product={p} index={i} width={dealW} />
@@ -332,11 +363,11 @@ export default function Home() {
               );
             }
             case 'image':
-              return sec.image ? <ImageSection key={sec.id ?? si} image={sec.image} link={sec.link} width={width} /> : null;
+              return sec.image ? <ImageSection key={sec.id ?? si} image={sec.image} link={sec.link} width={width} height={Number(sec.height) || 0} radius={L.imageBannerRadius} top={gap(26)} /> : null;
             case 'reviews':
               return (
                 <View key={sec.id ?? si}>
-                  <Txt v="h2" style={{ marginTop: 30, marginBottom: 4, paddingHorizontal: 20 }}>
+                  <Txt v="h2" style={{ marginTop: gap(30), marginBottom: 4, paddingHorizontal: 20 }}>
                     {sec.title}
                   </Txt>
                   {!!sec.subtitle && (
@@ -349,7 +380,7 @@ export default function Home() {
               );
             case 'pillars':
               return (
-                <View key={sec.id ?? si} style={{ marginTop: 30 }}>
+                <View key={sec.id ?? si} style={{ marginTop: gap(30) }}>
                   <Pillars />
                 </View>
               );
@@ -369,15 +400,15 @@ export default function Home() {
 }
 
 /** Full-width image section — keeps the uploaded image's own shape. */
-function ImageSection({ image, link, width }: { image: string; link?: string; width: number }) {
+function ImageSection({ image, link, width, height = 0, radius = 18, top = 26 }: { image: string; link?: string; width: number; height?: number; radius?: number; top?: number }) {
   const t = useTheme();
   const [aspect, setAspect] = useState(2);
   const w = width - 40;
   return (
-    <PressableScale scaleTo={0.98} onPress={() => openLink(link)} style={{ marginTop: 26, alignSelf: 'center', width: w }}>
+    <PressableScale scaleTo={0.98} onPress={() => openLink(link)} style={{ marginTop: top, alignSelf: 'center', width: w }}>
       <Image
         source={{ uri: resolveImage(image) }}
-        style={{ width: w, height: w / aspect, borderRadius: 18, backgroundColor: t.card }}
+        style={{ width: w, height: height > 0 ? height : w / aspect, borderRadius: radius, backgroundColor: t.card }}
         contentFit="cover"
         transition={250}
         cachePolicy="memory-disk"

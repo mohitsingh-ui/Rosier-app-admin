@@ -1,3 +1,6 @@
+import { useMemo } from 'react';
+import defaults from '../config/defaults.json';
+import { useContent } from '../config/remote';
 import { useApp } from '../store/app';
 import { useColorScheme } from 'react-native';
 
@@ -71,11 +74,51 @@ const dark: typeof light = {
 export type Theme = typeof light;
 export const themes = { light, dark };
 
+const isColor = (v: unknown): v is string => typeof v === 'string' && (/^#[0-9a-f]{3,8}$/i.test(v.trim()) || /^rgba?\(/i.test(v.trim()));
+
+/** Colours: the built-in palette, with anything set in the admin panel (Theme) on top. */
 export function useTheme(): Theme {
   const pref = useApp((s) => s.themePref);
   const system = useColorScheme();
   const mode = pref === 'system' ? (system === 'dark' ? 'dark' : 'light') : pref;
-  return mode === 'dark' ? dark : light;
+  const over = useContent('theme')[mode === 'dark' ? 'dark' : 'light'] as Record<string, unknown> | undefined;
+  return useMemo(() => {
+    const base = mode === 'dark' ? dark : light;
+    if (!over) return base;
+    const out: Theme = { ...base };
+    for (const [k, v] of Object.entries(over)) if (k in base && k !== 'mode' && isColor(v)) (out as any)[k] = v.trim();
+    return out;
+  }, [mode, over]);
+}
+
+export type Layout = (typeof defaults)['theme']['layout'];
+const LIMITS: Record<keyof Layout, [number, number]> = {
+  heroCardHeight: [120, 420],
+  heroImageRatio: [0, 4],
+  heroRadius: [0, 40],
+  carouselSeconds: [0, 30],
+  tileRatio: [0.2, 2],
+  tileRadius: [0, 40],
+  categoryTile: [48, 120],
+  categoryIcon: [24, 100],
+  dealCardWidth: [110, 260],
+  productImageRatio: [0.5, 1.6],
+  cardRadius: [0, 40],
+  imageBannerRadius: [0, 40],
+  sectionSpacing: [0, 3],
+};
+
+/** Sizes set in the admin panel (Theme → Sizes), kept within sensible limits. */
+export function useLayout(): Layout {
+  const raw = useContent('theme').layout as Partial<Layout> | undefined;
+  return useMemo(() => {
+    const out = { ...defaults.theme.layout };
+    for (const k of Object.keys(LIMITS) as (keyof Layout)[]) {
+      const n = Number(raw?.[k]);
+      if (Number.isFinite(n)) out[k] = Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], n));
+    }
+    return out;
+  }, [raw]);
 }
 
 export const radius = { sm: 10, md: 16, lg: 22, xl: 28, pill: 999 };

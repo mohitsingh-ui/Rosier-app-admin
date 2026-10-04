@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useContent } from '../config/remote';
-import { fonts, useTheme } from '../theme';
+import { fonts, useLayout, useTheme } from '../theme';
 import { Coin, CoinStack } from './Coin';
 import { Img, PressableScale } from './ui';
 
@@ -24,9 +24,10 @@ function Perk({ icon, label }: { icon: keyof typeof MaterialCommunityIcons.glyph
 
 export function CoinsBanner({ width, height = 212 }: { width: number; height?: number }) {
   const c = useContent('home').coinsBanner;
+  const L = useLayout();
   return (
     <PressableScale scaleTo={0.98} onPress={() => router.navigate('/coins')} style={{ width }}>
-      <LinearGradient colors={['#FFF6E6', '#F4DFC0', '#EBCB9B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[cardBase, { height, justifyContent: 'center' }]}>
+      <LinearGradient colors={['#FFF6E6', '#F4DFC0', '#EBCB9B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[cardBase, { height, borderRadius: L.heroRadius, justifyContent: 'center' }]}>
         <View style={{ maxWidth: width - 150 }}>
           <Text style={{ fontFamily: fonts.serif, fontSize: 22, color: '#4A2C17', lineHeight: 26 }}>{c.title}</Text>
           <Text style={{ fontFamily: fonts.sans, fontSize: 10, color: '#5A3A1E', marginTop: 6, lineHeight: 14 }}>
@@ -84,9 +85,10 @@ export function ProductBanner({
   }, []);
   const a = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(float.value, [0, 1], [4, -6]) }, { rotate: `${interpolate(float.value, [0, 1], [-3, 3])}deg` }] }));
   const fg = light ? '#FFF5E8' : '#3E2415';
+  const L = useLayout();
   return (
     <PressableScale scaleTo={0.98} onPress={onPress} style={{ width }}>
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[cardBase, { height, flexDirection: 'row', alignItems: 'center' }]}>
+      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[cardBase, { height, borderRadius: L.heroRadius, flexDirection: 'row', alignItems: 'center' }]}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.serif, fontSize: 24, color: fg, lineHeight: 28 }}>{title}</Text>
           <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: fg, opacity: 0.85, marginTop: 6, lineHeight: 15 }}>{sub}</Text>
@@ -104,7 +106,7 @@ export function ProductBanner({
 }
 
 /** Auto-advancing carousel with animated pill dots. */
-export function Carousel({ width, slides }: { width: number; slides: React.ReactNode[] }) {
+export function Carousel({ width, slides, seconds = 4.2 }: { width: number; slides: React.ReactNode[]; seconds?: number }) {
   const t = useTheme();
   const ref = useRef<ScrollView>(null);
   const [i, setI] = useState(0);
@@ -113,14 +115,15 @@ export function Carousel({ width, slides }: { width: number; slides: React.React
   const item = width - 40;
 
   useEffect(() => {
+    if (!seconds || slides.length < 2) return; // 0 = don't auto-slide
     const id = setInterval(() => {
       if (touching.current) return;
       const next = (i + 1) % slides.length;
       ref.current?.scrollTo({ x: next * (item + gap), animated: true });
       setI(next);
-    }, 4200);
+    }, seconds * 1000);
     return () => clearInterval(id);
-  }, [i, slides.length, item]);
+  }, [i, slides.length, item, seconds]);
 
   const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     touching.current = false;

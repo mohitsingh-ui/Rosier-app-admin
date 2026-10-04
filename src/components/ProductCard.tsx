@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { coinsForAmount } from '../config/coins';
 import { defaultVariant } from '../data/catalog';
 import type { Product } from '../data/types';
 import { rupee, shortTitle } from '../lib/format';
 import { success } from '../lib/haptics';
 import { useCart, useWishlist } from '../store/shop';
-import { fonts, useTheme } from '../theme';
+import { fonts, useLayout, useTheme } from '../theme';
 import { Coin } from './Coin';
 import { flyFrom } from './FlyToCart';
 import { toast } from './Toast';
@@ -29,15 +29,16 @@ export const CATEGORY_CHIPS: Record<string, string[]> = {
 export const openProduct = (p: Product) => router.push({ pathname: '/product/[handle]', params: { handle: p.handle } });
 
 /** Compact "Limited deals" card from the design. */
-export function DealCard({ product, index = 0, width = 150 }: { product: Product; index?: number; width?: number }) {
+export const DealCard = React.memo(function DealCard({ product, index = 0, width = 150 }: { product: Product; index?: number; width?: number }) {
   const t = useTheme();
+  const L = useLayout();
   const v = defaultVariant(product);
   const add = useCart((s) => s.add);
   const imgRef = useRef<View>(null);
   return (
     <Animated.View entering={FadeInDown.delay(80 * index).springify().damping(14)}>
-      <PressableScale onPress={() => openProduct(product)} style={{ width, backgroundColor: t.card, borderRadius: 18, padding: 10 }}>
-        <View ref={imgRef} collapsable={false} style={{ height: width * 0.95, alignItems: 'center', justifyContent: 'center' }}>
+      <PressableScale onPress={() => openProduct(product)} style={{ width, backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 2), padding: 10 }}>
+        <View ref={imgRef} collapsable={false} style={{ height: width * L.productImageRatio * 1.05, alignItems: 'center', justifyContent: 'center' }}>
           <Img source={product.images[0]} size={width} style={{ width: '100%', height: '100%' }} />
           {v.available && (
             <PressableScale
@@ -72,11 +73,12 @@ export function DealCard({ product, index = 0, width = 150 }: { product: Product
       </PressableScale>
     </Animated.View>
   );
-}
+});
 
 /** Bigger card used in "Loved Across Generations" and the shop grid. */
-export function GridCard({ product, index = 0, width }: { product: Product; index?: number; width: number }) {
+export const GridCard = React.memo(function GridCard({ product, index = 0, width }: { product: Product; index?: number; width: number }) {
   const t = useTheme();
+  const L = useLayout();
   const [vid, setVid] = useState(defaultVariant(product).id);
   const [open, setOpen] = useState(false);
   const v = product.variants.find((x) => x.id === vid) ?? product.variants[0];
@@ -88,9 +90,9 @@ export function GridCard({ product, index = 0, width }: { product: Product; inde
   const imgRef = useRef<View>(null);
 
   return (
-    <Animated.View entering={FadeInDown.delay(60 * (index % 6)).springify().damping(15)} layout={LinearTransition.springify()} style={{ width }}>
-      <PressableScale scaleTo={0.97} onPress={() => openProduct(product)} style={[{ backgroundColor: t.cardStrong, borderRadius: 20, padding: 8, borderWidth: 1, borderColor: t.border }, styles.shadow]}>
-        <View ref={imgRef} collapsable={false} style={{ backgroundColor: t.card, borderRadius: 14, height: width * 0.9, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+    <Animated.View entering={FadeInDown.delay(60 * (index % 6)).springify().damping(15)} style={{ width }}>
+      <PressableScale scaleTo={0.97} onPress={() => openProduct(product)} style={[{ backgroundColor: t.cardStrong, borderRadius: L.cardRadius, padding: 8, borderWidth: 1, borderColor: t.border }, styles.shadow]}>
+        <View ref={imgRef} collapsable={false} style={{ backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 6), height: width * L.productImageRatio, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <Img source={product.images[0]} size={width} style={{ width: '92%', height: '92%' }} />
           {product.badge && (
             <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(62,36,21,0.85)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -195,4 +197,4 @@ export function GridCard({ product, index = 0, width }: { product: Product; inde
       </PressableScale>
     </Animated.View>
   );
-}
+});

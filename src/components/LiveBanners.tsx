@@ -6,7 +6,7 @@ import { resolveImage } from '../data/catalog';
 import { LiveBanner, useBanners } from '../data/banners';
 import { useContent } from '../config/remote';
 import { openLink } from '../lib/links';
-import { useTheme } from '../theme';
+import { useLayout, useTheme } from '../theme';
 import { PressableScale } from './ui';
 
 export function openBanner(href: string) {
@@ -16,11 +16,12 @@ export function openBanner(href: string) {
 /** One hero slide, pulled live from rosierfoods.com. */
 export function LiveBannerSlide({ banner, width, height }: { banner: LiveBanner; width: number; height: number }) {
   const t = useTheme();
+  const L = useLayout();
   return (
     <PressableScale scaleTo={0.98} onPress={() => openBanner(banner.href)} style={{ width }}>
       <Image
         source={{ uri: resolveImage(banner.image) }}
-        style={{ width, height, borderRadius: 22, backgroundColor: t.card }}
+        style={{ width, height, borderRadius: L.heroRadius, backgroundColor: t.card }}
         contentFit="cover"
         transition={300}
         cachePolicy="memory-disk"
@@ -39,6 +40,7 @@ export function LiveBannerSlide({ banner, width, height }: { banner: LiveBanner;
 export function LiveTiles({ width }: { width: number }) {
   const t = useTheme();
   const home = useContent('home');
+  const L = useLayout();
   const website = useBanners((s) => s.tiles);
   const tiles: LiveBanner[] =
     home.tilesSource === 'none' ? [] : home.tilesSource === 'custom' ? (home.tiles as { image: string; link: string }[]).filter((x) => x.image).map((x, i) => ({ id: `t${i}`, image: x.image, href: x.link })) : website;
@@ -49,7 +51,7 @@ export function LiveTiles({ width }: { width: number }) {
       {tiles.slice(0, 2).map((b, i) => (
         <Animated.View key={b.id} entering={FadeInDown.delay(i * 100).springify()}>
           <PressableScale onPress={() => openBanner(b.href)} style={{ width: w }}>
-            <Image source={{ uri: resolveImage(b.image) }} style={{ width: w, height: w * 0.55, borderRadius: 16, backgroundColor: t.card }} contentFit="cover" transition={300} cachePolicy="memory-disk" />
+            <Image source={{ uri: resolveImage(b.image) }} style={{ width: w, height: w * L.tileRatio, borderRadius: L.tileRadius, backgroundColor: t.card }} contentFit="cover" transition={300} cachePolicy="memory-disk" />
           </PressableScale>
         </Animated.View>
       ))}
