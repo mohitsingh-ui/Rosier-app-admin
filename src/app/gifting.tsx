@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ProductGrid } from '../components/ProductGrid';
 import { Button, Img, ScreenHeader } from '../components/ui';
@@ -12,6 +13,7 @@ import { fonts, useTheme } from '../theme';
 export default function Gifting() {
   const t = useTheme();
   const g = useContent('gifting');
+  const hampers = (((useContent('webPages' as any) as any)?.items ?? []) as any[]).find((p) => p && p.enabled !== false && /hamper/i.test(`${p.id} ${p.handle}`));
   const combos = useProducts().filter((p) => p.category === (g.category || 'combos'));
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -41,6 +43,16 @@ export default function Gifting() {
                 onPress={() => Linking.openURL(`mailto:${g.email}?subject=${encodeURIComponent(g.subject)}`)}
               />
             </LinearGradient>
+            {hampers && (
+              <Pressable onPress={() => router.push({ pathname: '/page/[handle]', params: { handle: hampers.id || hampers.handle } })} style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: t.border }}>
+                <MaterialCommunityIcons name="gift-open-outline" size={30} color={t.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, color: t.text }}>{hampers.title || 'Gift Hampers'}</Text>
+                  <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: t.textSoft }}>Festive hampers — pre-book now</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color={t.textMute} />
+              </Pressable>
+            )}
           </Animated.View>
         }
       />

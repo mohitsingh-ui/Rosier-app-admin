@@ -39,7 +39,7 @@ export const DealCard = React.memo(function DealCard({ product, index = 0, width
     <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 30).springify().damping(14)}>
       <PressableScale onPress={() => openProduct(product)} style={{ width, backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 2), padding: 10 }}>
         <View ref={imgRef} collapsable={false} style={{ height: width * L.productImageRatio * 1.05, alignItems: 'center', justifyContent: 'center' }}>
-          <Img source={product.images[0]} size={width} style={{ width: '100%', height: '100%' }} />
+          <Img source={product.images[0]} size={width} style={{ width: `${L.dealImageScale}%`, height: `${L.dealImageScale}%` }} contentFit={L.listImageFit as any} />
           {v.available && (
             <PressableScale
               onPress={() => {
@@ -92,8 +92,8 @@ export const GridCard = React.memo(function GridCard({ product, index = 0, width
   return (
     <Animated.View entering={FadeInDown.delay(30 * (index % 6)).springify().damping(15)} style={{ width }}>
       <PressableScale scaleTo={0.97} onPress={() => openProduct(product)} style={[{ backgroundColor: t.cardStrong, borderRadius: L.cardRadius, padding: 8, borderWidth: 1, borderColor: t.border }, styles.shadow]}>
-        <View ref={imgRef} collapsable={false} style={{ backgroundColor: t.card, borderRadius: Math.max(0, L.cardRadius - 6), height: width * L.productImageRatio, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <Img source={product.images[0]} size={width} style={{ width: '92%', height: '92%' }} />
+        <View ref={imgRef} collapsable={false} style={{ backgroundColor: t.imageBg, borderRadius: Math.max(0, L.cardRadius - 6), height: width * L.productImageRatio, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <Img source={product.images[0]} size={width} style={{ width: `${L.listImageScale}%`, height: `${L.listImageScale}%` }} contentFit={L.listImageFit as any} />
           {product.badge && (
             <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(62,36,21,0.85)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
               <Text style={{ color: '#FBE6CF', fontFamily: fonts.sansMedium, fontSize: 9 }}>{product.badge}</Text>
@@ -165,9 +165,9 @@ export const GridCard = React.memo(function GridCard({ product, index = 0, width
 
         <View style={{ marginTop: 6 }}>
           {v.discount > 0 && <Text style={{ fontFamily: fonts.sansMedium, fontSize: 12, color: t.green }}>({v.discount}% off)</Text>}
-          <View style={[styles.row, { gap: 6 }]}>
+          <View style={[styles.row, { gap: 6, flexWrap: 'wrap' }]}>
             {v.mrp > v.price && <Text style={{ fontFamily: fonts.sans, fontSize: 11, color: t.textMute, textDecorationLine: 'line-through' }}>{rupee(v.mrp, true)}</Text>}
-            <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, color: t.text }}>{rupee(v.price, true)}</Text>
+            <Text style={{ fontFamily: fonts.sansSemi, fontSize: width < 130 ? 13 : 15, color: t.text }}>{rupee(v.price, true)}</Text>
           </View>
         </View>
 
@@ -190,7 +190,7 @@ export const GridCard = React.memo(function GridCard({ product, index = 0, width
               }}
               style={{ height: 36, borderRadius: 10, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Text style={{ fontFamily: fonts.sansSemi, fontSize: 11, letterSpacing: 1.8, color: '#fff' }}>ADD TO CART</Text>
+              <Text numberOfLines={1} style={{ fontFamily: fonts.sansSemi, fontSize: 11, letterSpacing: width < 130 ? 0.6 : 1.8, color: '#fff' }}>{width < 130 ? 'ADD' : 'ADD TO CART'}</Text>
             </PressableScale>
           )}
         </View>

@@ -36,6 +36,7 @@ function notifications(): N | null {
 
 const SOUNDS = ['chime', 'bell', 'coin', 'soft'];
 let token: string | null = null;
+let fcmToken: string | null = null;
 
 /** What's going on with notifications on this phone (shown in Profile). */
 export const usePushState = create<{ mode: 'off' | 'push' | 'background' | 'denied' | 'unsupported'; detail: string }>(() => ({ mode: 'off', detail: '' }));
@@ -78,6 +79,13 @@ export async function startNotifications() {
     toInbox(c);
     if ((c.data as any)?.kind === 'order') loadCustomer();
   });
+  // Firebase can rotate the phone's token — keep the server up to date.
+  n.addPushTokenListener?.((t: any) => {
+    if (Platform.OS === 'android' && typeof t?.data === 'string' && t.data !== fcmToken) {
+      fcmToken = t.data;
+      syncPush();
+    }
+  });
   n.addNotificationResponseReceivedListener((r) => {
     toInbox(r.notification.request.content);
     handleTap(r.notification.request.content.data);
@@ -116,19 +124,33 @@ export async function registerPush(ask = true): Promise<boolean> {
     }
     // Backup that works without Firebase: the phone checks for new messages every ~15 minutes.
     const bg = await scheduleBackgroundCheck();
-    const projectId = (Constants.expoConfig?.extra as any)?.eas?.projectId ?? (Constants as any).easConfig?.projectId;
     token = null;
+    fcmToken = null;
     let why = '';
-    if (!projectId) why = 'App not linked to Expo yet (eas init)';
-    else {
+    if (Platform.OS === 'android') {
+      // Android: the phone's own Firebase token — our server sends to it directly (no Expo account needed).
       try {
-        token = (await n.getExpoPushTokenAsync({ projectId })).data;
+        const d = await n.getDevicePushTokenAsync();
+        fcmToken = typeof d.data === 'string' ? d.data : null;
+        if (!fcmToken) why = 'No Firebase token';
       } catch (e: any) {
-        why = /FIREBASE|FCM|google/i.test(String(e?.message)) ? 'Firebase not set up in this build' : String(e?.message || 'No push token');
+        why = /FIREBASE|FCM|google|Default FirebaseApp/i.test(String(e?.message)) ? 'Firebase not added to this app build yet' : String(e?.message || 'No push token');
+      }
+    } else {
+      const projectId = (Constants.expoConfig?.extra as any)?.eas?.projectId ?? (Constants as any).easConfig?.projectId;
+      if (!projectId) why = 'App not linked to Expo yet (eas init)';
+      else {
+        try {
+          token = (await n.getExpoPushTokenAsync({ projectId })).data;
+        } catch (e: any) {
+          why = String(e?.message || 'No push token');
+        }
       }
     }
-    await syncPush();
-    usePushState.setState(token ? { mode: 'push', detail: 'Instant' } : { mode: 'background', detail: `${bg ? 'Checks every ~15 min' : 'Checks when the app opens'} · ${why}` });
+    const r = await syncPush();
+    const instant = (token || fcmToken) && r?.mode === 'push';
+    if (!instant && r?.mode === 'waiting') why = 'Waiting for the Firebase key in the admin panel';
+    usePushState.setState(instant ? { mode: 'push', detail: 'Instant' } : { mode: 'background', detail: `${bg ? 'Checks every ~15 min' : 'Checks when the app opens'} · ${why || 'Push not available'}` });
     return true;
   } catch (e: any) {
     console.warn('Push registration failed', e);
@@ -145,8 +167,9 @@ export async function syncPush() {
   if (!p?.granted) return;
   const app = useApp.getState();
   const c = useAuth.getState().customer;
-  await post('/api/push/register', {
+  const res = await post('/api/push/register', {
     token,
+    fcmToken,
     deviceId: app.deviceId,
     platform: Platform.OS,
     customerId: c?.id ?? null,
@@ -155,6 +178,7 @@ export async function syncPush() {
     name: c?.firstName || app.name || null,
     member: c ? membershipOf(c, getContent('benefits')).active : false,
   });
+  return (res && res.ok ? await res.json().catch(() => null) : null) as { mode?: string } | null;
 }
 
 /* ───────── Usage pings (sessions + live visitors) ───────── */

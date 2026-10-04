@@ -146,6 +146,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="auth" options={{ animation: 'none' }} />
           <Stack.Screen name="track" options={{ animation: 'fade_from_bottom' }} />
+          <Stack.Screen name="page/[handle]" options={{ animation: 'fade_from_bottom' }} />
         </Stack>
         <SeasonalEffects />
         <FlyHost />

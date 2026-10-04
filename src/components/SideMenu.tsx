@@ -13,6 +13,7 @@ import { PressableScale } from './ui';
 
 const ITEMS: { label: string; icon: ReactNode; go: () => void }[] = [
   { label: 'Category', icon: <MaterialCommunityIcons name="shape-outline" size={30} />, go: () => router.navigate('/shop') },
+  { label: 'Gift Hampers', icon: <MaterialCommunityIcons name="gift-open-outline" size={30} />, go: () => router.push({ pathname: '/page/[handle]', params: { handle: 'hampers' } }) },
   { label: 'Gift cards', icon: <MaterialCommunityIcons name="gift-outline" size={30} />, go: () => router.push('/gifting') },
   { label: 'Cart', icon: <Ionicons name="cart-outline" size={30} />, go: () => router.navigate('/cart') },
   { label: 'Benefit Club', icon: <MaterialCommunityIcons name="crown-outline" size={30} />, go: () => router.push('/benefits-club') },

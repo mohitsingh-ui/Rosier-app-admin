@@ -26,6 +26,9 @@ import { flyFrom } from '../../components/FlyToCart';
 import { CATEGORY_CHIPS, DealCard } from '../../components/ProductCard';
 import { toast } from '../../components/Toast';
 import { EmptyState, Img, PressableScale, QtyStepper } from '../../components/ui';
+import { Editable } from '../../components/Editable';
+import { AplusBanners, ProductReviews, Stars, useProductPage, WebsiteTabs } from '../../components/ProductExtras';
+import { useProductExtras } from '../../lib/website';
 import { coinsForAmount } from '../../config/coins';
 import { defaultVariant, findProduct, STORE_URL, useProducts } from '../../data/catalog';
 import { rupee, shortTitle } from '../../lib/format';
@@ -105,7 +108,9 @@ export default function ProductScreen() {
   const variant = product ? product.variants.find((v) => v.id === vid) ?? defaultVariant(product) : undefined;
   const line = useCart((s) => (variant ? s.items.find((i) => i.variantId === variant.id) : undefined));
 
-  const HERO = height * 0.58;
+  const pp = useProductPage();
+  const { data: extras } = useProductExtras(product?.handle);
+  const HERO = (height * pp.heroHeight) / 100;
   const onScroll = useAnimatedScrollHandler((e) => {
     y.value = e.contentOffset.y;
   });
@@ -143,6 +148,7 @@ export default function ProductScreen() {
     <View style={{ flex: 1, backgroundColor: t.cardStrong }}>
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* Hero gallery */}
+        <Editable id="productPage" label="Product photo" target="productPage.heroHeight" base={pp.heroHeight}>
         <Animated.View ref={heroRef as any} collapsable={false} style={[{ height: HERO, backgroundColor: '#2A1A10' }, heroStyle]}>
           <ScrollView
             horizontal
@@ -151,8 +157,8 @@ export default function ProductScreen() {
             onMomentumScrollEnd={(e) => setImgIdx(Math.round(e.nativeEvent.contentOffset.x / width))}
           >
             {product.images.map((uri, i) => (
-              <View key={uri} style={{ width, height: HERO, backgroundColor: '#F7EFE6' }}>
-                <Img source={uri} size={width} style={{ width: '100%', height: '100%' }} contentFit={i === 0 ? 'contain' : 'cover'} />
+              <View key={uri} style={{ width, height: HERO, backgroundColor: pp.heroBg }}>
+                <Img source={uri} size={width} style={{ width: '100%', height: '100%' }} contentFit={i === 0 ? pp.heroFit : 'cover'} />
               </View>
             ))}
           </ScrollView>
@@ -167,9 +173,10 @@ export default function ProductScreen() {
               <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: '#D9CFC6', marginTop: 2 }} numberOfLines={1}>
                 {(CATEGORY_CHIPS[product.category] ?? []).join(' · ')}
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 }}>
-                <Ionicons name="star" size={20} color="#D9844A" />
-                <Text style={{ fontFamily: fonts.sansSemi, fontSize: 18, color: '#fff' }}>{product.rating.toFixed(1)}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 14 }}>
+                {extras?.rating ? <Stars value={extras.rating} size={16} color={pp.starColor} /> : <Ionicons name="star" size={20} color="#D9844A" />}
+                <Text style={{ fontFamily: fonts.sansSemi, fontSize: 18, color: '#fff' }}>{(extras?.rating || product.rating).toFixed(1)}</Text>
+                {!!extras?.reviewCount && <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: '#D9CFC6' }}>({extras.reviewCount})</Text>}
                 {product.badge && <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: '#D9CFC6', marginLeft: 6 }}>{product.badge}</Text>}
               </View>
             </Animated.View>
@@ -195,6 +202,7 @@ export default function ProductScreen() {
             </View>
           )}
         </Animated.View>
+        </Editable>
 
         {/* Sheet */}
         <View style={{ backgroundColor: t.cardStrong, borderTopLeftRadius: 26, borderTopRightRadius: 26, marginTop: -18, padding: 20 }}>
@@ -280,6 +288,10 @@ export default function ProductScreen() {
               </View>
             ))}
           </View>
+
+          <WebsiteTabs extras={extras} pp={pp} />
+          <AplusBanners extras={extras} pp={pp} />
+          <ProductReviews extras={extras} pp={pp} title={product.title} />
 
           {related.length > 0 && (
             <>

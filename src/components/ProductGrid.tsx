@@ -4,7 +4,8 @@ import { FlatList, Pressable, ScrollView, Text, useWindowDimensions, View } from
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { defaultVariant, useCategories } from '../data/catalog';
 import type { CategoryId, Product } from '../data/types';
-import { fonts, useTheme } from '../theme';
+import { fonts, useLayout, useTheme } from '../theme';
+import { Editable } from './Editable';
 import { GridCard } from './ProductCard';
 import { Chip, EmptyState } from './ui';
 
@@ -35,7 +36,9 @@ export function ProductGrid({
   const [cat, setCat] = useState<CategoryId | 'all'>(initialCategory);
   const [sort, setSort] = useState<Sort>('popular');
   const [sortOpen, setSortOpen] = useState(false);
-  const cardW = (width - 16 * 2 - 12) / 2;
+  const L = useLayout();
+  const cols = L.gridColumns;
+  const cardW = (width - 16 * 2 - 12 * (cols - 1)) / cols;
 
   const list = useMemo(() => {
     let l = cat === 'all' ? products : products.filter((p) => p.category === cat);
@@ -50,10 +53,10 @@ export function ProductGrid({
   return (
     <FlatList
       data={list}
-      key={`${cat}-${sort}`}
+      key={`${cat}-${sort}-${cols}`}
       keyExtractor={(p) => p.handle}
-      numColumns={2}
-      columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
+      numColumns={cols}
+      columnWrapperStyle={cols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
       contentContainerStyle={{ gap: 12, paddingBottom: bottomPad }}
       showsVerticalScrollIndicator={false}
       initialNumToRender={6}
@@ -96,7 +99,17 @@ export function ProductGrid({
         </View>
       }
       ListEmptyComponent={<EmptyState icon="leaf-outline" title="Nothing here yet" body="We're cooking something up for this shelf. Check back soon." />}
-      renderItem={({ item, index }) => <GridCard product={item} index={index} width={cardW} />}
+      renderItem={({ item, index }) =>
+        index === 0 ? (
+          <Editable id="theme.cards" label="Product cards (all)" target="theme.layout.productImageRatio" base={L.productImageRatio} style={cols === 1 ? { paddingHorizontal: 16 } : undefined}>
+            <GridCard product={item} index={index} width={cardW} />
+          </Editable>
+        ) : (
+          <View style={cols === 1 ? { paddingHorizontal: 16 } : undefined}>
+            <GridCard product={item} index={index} width={cardW} />
+          </View>
+        )
+      }
     />
   );
 }

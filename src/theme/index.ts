@@ -21,6 +21,7 @@ const light = {
   bgAlt: '#FBEBD8',
   header: '#FBE6CF',
   card: '#F7EEE4',
+  imageBg: '#F7EEE4',
   cardStrong: '#FFFFFF',
   border: '#EFDCC6',
   text: '#2B1A10',
@@ -49,6 +50,7 @@ const dark: typeof light = {
   bgAlt: '#241E1A',
   header: '#241E1A',
   card: '#2C2521',
+  imageBg: '#2C2521',
   cardStrong: '#332A25',
   border: '#3D322B',
   text: '#F6EDE3',
@@ -92,7 +94,7 @@ export function useTheme(): Theme {
 }
 
 export type Layout = (typeof defaults)['theme']['layout'];
-const LIMITS: Record<keyof Layout, [number, number]> = {
+const LIMITS: Partial<Record<keyof Layout, [number, number]>> = {
   heroCardHeight: [120, 420],
   heroImageRatio: [0, 4],
   heroRadius: [0, 40],
@@ -106,6 +108,9 @@ const LIMITS: Record<keyof Layout, [number, number]> = {
   cardRadius: [0, 40],
   imageBannerRadius: [0, 40],
   sectionSpacing: [0, 3],
+  gridColumns: [1, 3],
+  listImageScale: [40, 100],
+  dealImageScale: [40, 100],
 };
 
 /** Sizes set in the admin panel (Theme → Sizes), kept within sensible limits. */
@@ -115,8 +120,11 @@ export function useLayout(): Layout {
     const out = { ...defaults.theme.layout };
     for (const k of Object.keys(LIMITS) as (keyof Layout)[]) {
       const n = Number(raw?.[k]);
-      if (Number.isFinite(n)) out[k] = Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], n));
+      const lim = LIMITS[k]!;
+      if (Number.isFinite(n)) (out as any)[k] = Math.min(lim[1], Math.max(lim[0], n));
     }
+    out.gridColumns = Math.round(out.gridColumns);
+    if (raw?.listImageFit === 'cover' || raw?.listImageFit === 'contain') out.listImageFit = raw.listImageFit;
     return out;
   }, [raw]);
 }

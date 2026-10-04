@@ -66,7 +66,7 @@ type Slide = {
 };
 
 /* A looping video that plays only while its slide is on screen. */
-function SlideVideo({ uri, poster, active, sound, w, h, radius = 0, muteTop = 0 }: { uri: string; poster?: string; active: boolean; sound?: boolean; w: number; h: number; radius?: number; muteTop?: number }) {
+function SlideVideo({ uri, poster, active, sound, w, h, radius = 0, muteTop = 0, fit = 'cover' }: { uri: string; poster?: string; active: boolean; sound?: boolean; w: number; h: number; radius?: number; muteTop?: number; fit?: 'cover' | 'contain' }) {
   const player = useVideoPlayer(uri, (p) => {
     p.loop = true;
     p.muted = !sound;
@@ -82,8 +82,8 @@ function SlideVideo({ uri, poster, active, sound, w, h, radius = 0, muteTop = 0 
   }, [muted, player]);
   return (
     <View style={{ width: w, height: h, overflow: 'hidden', borderRadius: radius, backgroundColor: '#2B1A10' }}>
-      <VideoView player={player} style={{ width: w, height: h }} contentFit="cover" nativeControls={false} />
-      {!!poster && status !== 'readyToPlay' && <Img source={poster} style={{ position: 'absolute', top: 0, left: 0, width: w, height: h }} contentFit="cover" />}
+      <VideoView player={player} style={{ width: w, height: h }} contentFit={fit} nativeControls={false} />
+      {!!poster && status !== 'readyToPlay' && <Img source={poster} style={{ position: 'absolute', top: 0, left: 0, width: w, height: h }} contentFit={fit} />}
       <Pressable
         onPress={() => setMuted((m) => !m)}
         hitSlop={10}
@@ -305,9 +305,19 @@ export default function Onboarding() {
     } else finish();
   };
 
-  const artH = height * 0.52;
-  // Framed videos are portrait (9:16) and fit inside the art area.
-  const frameW = Math.min(width * 0.62, ((artH - 20) * 9) / 16);
+  // Sizes per slide (admin panel → Intro slides).
+  const num = (v: unknown, d: number, lo: number, hi: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.min(hi, Math.max(lo, n)) : d;
+  };
+  const sizesOf = (s: any) => {
+    const artH = (height * num(s.artHeight, 52, 20, 90)) / 100;
+    const scale = num(s.artScale, 1, 0.3, 2);
+    const ratio = num(s.videoRatio, 1.78, 0.3, 2.5);
+    let vw = (width * num(s.videoWidth, 62, 20, 100)) / 100;
+    if (vw * ratio > artH - 10) vw = (artH - 10) / ratio; // keep the video inside its area
+    return { artH, scale, vw, vh: vw * ratio, radius: num(s.videoRadius, 28, 0, 200) || 0, fit: s.videoFit === 'contain' ? 'contain' : 'cover' } as const;
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: BG }}>
@@ -324,16 +334,21 @@ export default function Onboarding() {
         onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
         keyboardShouldPersistTaps="handled"
       >
-        {SLIDES.map((s, i) => (
+        {SLIDES.map((s, i) => {
+          const z = sizesOf(s);
+          const artH = z.artH;
+          const idx = (ob.slides as Slide[]).indexOf(s);
+          return (
           <View key={s.id ?? i} style={{ width, paddingTop: insets.top + 50 }}>
             <Editable id={`onboarding.slides.${(ob.slides as Slide[]).indexOf(s)}`} label={`Intro slide · ${s.title}`} style={{ flex: 1 }}>
             {s.art === 'video_full' && !!s.video && (
               <View style={{ position: 'absolute', top: 0, left: 0, width, height }}>
-                <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={height} muteTop={insets.top + 12} />
+                <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={height} muteTop={insets.top + 12} fit={z.fit} />
                 <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
               </View>
             )}
-            <ArtParallax index={i} x={x} width={width} on={vibrant} style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>
+            <Editable id={`onboarding.slides.${idx}.art`} label="Picture / video area" target={`onboarding.slides.${idx}.artHeight`} base={num((s as any).artHeight, 52, 20, 90)}>
+            <ArtParallax index={i} x={x} width={width} on={vibrant} style={{ height: artH, alignItems: 'center', justifyContent: 'center', transform: [{ scale: s.art === 'video' ? 1 : z.scale }] }}>
               {s.art === 'collage' && (
                 <View style={{ width, height: artH }}>
                   {(s.images ?? []).slice(0, COLLAGE.length).map((uri, k) => (
@@ -341,16 +356,19 @@ export default function Onboarding() {
                   ))}
                 </View>
               )}
-              {s.art === 'churn' && !!s.image && <Churn uri={s.image} size={Math.min(width * 0.82, artH)} />}
+              {s.art === 'churn' && !!s.image && <Churn uri={s.image} size={Math.min(width * 0.82, artH) * z.scale} />}
               {s.art === 'coins' && <CoinRain width={width} />}
-              {s.art === 'image' && !!s.image && <BigImage uri={s.image} size={Math.min(width * 0.86, artH)} />}
+              {s.art === 'image' && !!s.image && <BigImage uri={s.image} size={Math.min(width * 0.86, artH) * z.scale} />}
               {s.art === 'video' && !!s.video && (
                 <Animated.View entering={FadeIn.duration(500)}>
-                  <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} radius={28} w={frameW} h={frameW * (16 / 9)} />
+                  <Editable id={`onboarding.slides.${idx}.video`} label="Video size" target={`onboarding.slides.${idx}.videoWidth`} base={num((s as any).videoWidth, 62, 20, 100)}>
+                    <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} radius={z.radius} w={z.vw} h={z.vh} fit={z.fit} />
+                  </Editable>
                 </Animated.View>
               )}
             </ArtParallax>
-            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={accent} light={s.art === 'video_full' && !!s.video} active={vibrant && page === i} />
+            </Editable>
+            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={(s as any).titleColor || accent} subColor={(s as any).subColor} titleSize={num((s as any).titleSize, 34, 16, 64)} subSize={num((s as any).subSize, 15, 10, 28)} light={s.art === 'video_full' && !!s.video} active={vibrant && page === i} />
             {!!s.chips?.length && page === i && <Steps chips={s.chips} accent={accent} />}
             {!!s.showNameInput && (
               <Animated.View entering={FadeIn.delay(100)} style={{ paddingHorizontal: 28, marginTop: 16 }}>
@@ -377,7 +395,8 @@ export default function Onboarding() {
             )}
             </Editable>
           </View>
-        ))}
+          );
+        })}
       </Animated.ScrollView>
 
       {/* Footer: dots, skip, next */}
@@ -426,7 +445,7 @@ function ArtParallax({ index, x, width, on, style, children }: { index: number; 
   );
 }
 
-function SlideText({ index, x, width, title, sub, logo, accent, light, active }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean; active?: boolean }) {
+function SlideText({ index, x, width, title, sub, logo, accent, light, active, titleSize = 34, subSize = 15, subColor }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean; active?: boolean; titleSize?: number; subSize?: number; subColor?: string }) {
   const a = useAnimatedStyle(() => {
     const p = (x.value - index * width) / width;
     return {
@@ -441,8 +460,8 @@ function SlideText({ index, x, width, title, sub, logo, accent, light, active }:
           <RosierLogo width={110} color={light ? '#FFFFFF' : '#5A3520'} />
         </View>
       )}
-      <WordReveal text={title} active={!!active} style={{ fontFamily: fonts.sansSemi, fontSize: 34, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }} />
-      <Text style={{ fontFamily: fonts.sans, fontSize: 15, color: light ? 'rgba(255,255,255,0.9)' : '#7A6453', marginTop: 4, lineHeight: 22 }}>{sub}</Text>
+      <WordReveal text={title} active={!!active} style={{ fontFamily: fonts.sansSemi, fontSize: titleSize, lineHeight: titleSize * 1.18, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }} />
+      <Text style={{ fontFamily: fonts.sans, fontSize: subSize, color: subColor || (light ? 'rgba(255,255,255,0.9)' : '#7A6453'), marginTop: 4, lineHeight: subSize * 1.47 }}>{sub}</Text>
     </Animated.View>
   );
 }

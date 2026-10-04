@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { storage } from '../store/storage';
 import { STORE_URL, storeFetchUrl } from './catalog';
+import { getContent } from '../config/remote';
+
+const webPageHandles = () => {
+  try {
+    return (((getContent('webPages' as any) as any)?.items ?? []) as any[]).filter((p) => p && p.enabled !== false).map((p) => String(p.handle));
+  } catch {
+    return [];
+  }
+};
 
 export type LiveBanner = { id: string; image: string; href: string };
 
@@ -174,6 +183,9 @@ export function routeForHref(href: string): { pathname: string; params?: Record<
   const product = path.match(/^\/products\/([^/?#]+)/)?.[1];
   if (product === 'membership') return { pathname: '/benefits-club' };
   if (product) return { pathname: '/product/[handle]', params: { handle: product } };
+  // Website pages that are set up to open inside the app (admin → Website pages in the app).
+  const page = path.match(/^\/pages\/([^/?#]+)/)?.[1];
+  if (page && webPageHandles().includes(page)) return { pathname: '/page/[handle]', params: { handle: page } };
   const col = path.match(/^\/collections\/([^/?#]+)/)?.[1];
   const map: Record<string, string> = {
     ghee: 'ghee',
