@@ -54,7 +54,7 @@ const baseUrl = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get
 app.get('/healthz', (_req, res) => res.json({ ok: true, db: db.kind }));
 
 // The app (and the web preview) call these from anywhere; no cookies are involved.
-app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout'], (req, res, next) => {
+app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store'], (req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type, X-Customer-Token, If-None-Match');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -82,6 +82,53 @@ app.get(
 );
 
 app.get('/img/:id', wrap(serveImage));
+
+/* The web preview of the app can't read rosierfoods.com directly (browser CORS), so it reads it through here. */
+const STORE_URL = (process.env.STORE_URL || 'https://www.rosierfoods.com').replace(/\/$/, '');
+const storeCache = new Map();
+async function storeProxy(res, path, type) {
+  const hit = storeCache.get(path);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return res.type(type).send(hit.body);
+  try {
+    const r = await fetch(STORE_URL + path, { headers: { 'User-Agent': 'RosierAppPreview/1.0', Accept: type === 'json' ? 'application/json' : 'text/html' }, signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error(String(r.status));
+    const body = await r.text();
+    storeCache.set(path, { at: Date.now(), body });
+    res.type(type).send(body);
+  } catch {
+    if (hit) return res.type(type).send(hit.body);
+    res.status(502).json({ error: 'Store unreachable' });
+  }
+}
+app.get('/api/store/products.json', wrap((req, res) => storeProxy(res, `/products.json?limit=${Math.min(250, Number(req.query.limit) || 250)}`, 'json')));
+app.get('/api/store/home', wrap((_req, res) => storeProxy(res, '/', 'html')));
+
+/* The app itself (web build) for the admin panel's live phone preview. */
+const previewDir = path.resolve(here, '../app-preview');
+const previewCsp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https:",
+  "img-src * data: blob:",
+  "media-src * data: blob:",
+  "connect-src 'self' https:",
+  "frame-ancestors 'self'",
+].join('; ');
+app.use(
+  '/preview-app',
+  (_req, res, next) => {
+    res.set('Content-Security-Policy', previewCsp);
+    next();
+  },
+  express.static(previewDir, { index: false, maxAge: '1h' }),
+  (req, res, next) => {
+    // Any app screen (e.g. /preview-app/coins) loads the app; it routes itself.
+    if (req.method !== 'GET' || /\.\w+$/.test(req.path)) return next();
+    res.set('Cache-Control', 'no-cache');
+    res.sendFile(path.join(previewDir, 'index.html'), (err) => err && res.status(404).send('Preview not built'));
+  },
+);
 
 /* ───────── Shopify customer login, orders & checkout (used by the app) ───────── */
 

@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { renderFields } from './fields.js';
 import { confirmDialog, uploadZone } from './pickers.js';
 import { loadContent, onChange, sectionDef, setSection, state } from './store.js';
+import { previewSection, previewUpdate } from './preview.js';
 import { add, clear, fill, clone, copyText, debounce, fileSize, fullDate, h, icon, randomId, relTime, toast } from './util.js';
 
 /* ═════════ Section editor ═════════ */
@@ -106,6 +107,7 @@ export function sectionPage(root, key) {
   const changed = () => {
     dirty = true;
     paintStatus();
+    previewUpdate(doc);
     saveSoon();
   };
 
@@ -127,6 +129,7 @@ export function sectionPage(root, key) {
       doc = clone(section.draft);
       renderForm();
       paintStatus();
+      previewSection(key, doc);
       toast('Changes discarded');
     } catch (e) {
       toast(e.message, 'error');
@@ -164,6 +167,7 @@ export function sectionPage(root, key) {
   );
   renderForm();
   paintStatus();
+  previewSection(key, doc);
   const off = onChange(paintStatus);
 
   current = {

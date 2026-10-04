@@ -50,7 +50,8 @@
     ],
     "scheme": "rosier",
     "experiments": {
-      "typedRoutes": false
+      "typedRoutes": false,
+      "baseUrl": "/preview-app"
     },
     "extra": {
       "apiUrl": "https://rosier-app-backend.onrender.com"

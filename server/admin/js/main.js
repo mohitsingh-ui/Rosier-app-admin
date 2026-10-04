@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { currentEditor, imagesPage, sectionPage, teamPage, versionsPage } from './pages.js';
 import { consolePage, customersPage, ordersPage, shopifyPage } from './shopify.js';
+import { mountPreview, previewHide, previewRefresh } from './preview.js';
 import { openModal } from './pickers.js';
 import { changedKeys, loadContent, loadProducts, onChange, sectionDef, state } from './store.js';
 import { add, clear, fill, copyText, h, icon, relTime, toast } from './util.js';
@@ -92,6 +93,7 @@ function buildShell() {
   );
   const main = h('main', { class: 'main', id: 'main', tabindex: '-1' });
   fill(appRoot, sidebar, scrim, h('div', { class: 'content' }, topbar, main));
+  mountPreview(appRoot);
   shell = { nav, navBottom, main, publishBtn, userEl };
   paintUser();
   paintNav();
@@ -138,8 +140,9 @@ async function route() {
   const main = shell.main;
   clear(main);
   const [, kind, key] = (location.hash || '').split('/');
+  if (kind !== 'section' && location.hash) previewHide();
   if (kind === 'images') teardown = imagesPage(main);
-  else if (kind === 'versions') teardown = versionsPage(main, { onRestored: () => paintNav() });
+  else if (kind === 'versions') teardown = versionsPage(main, { onRestored: () => (paintNav(), previewRefresh()) });
   else if (kind === 'team') teardown = teamPage(main);
   else if (kind === 'shopify') teardown = shopifyPage(main);
   else if (kind === 'orders') teardown = ordersPage(main);

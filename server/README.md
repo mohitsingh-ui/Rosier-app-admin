@@ -72,3 +72,11 @@ Set up under **Shopify connection** in the admin panel. Each part has its own "H
 Customer login needs **new customer accounts** switched on in Shopify (Settings → Customer accounts). In the Headless channel's Customer Account API settings, add the **Callback URI** shown in the panel (`https://<your-backend>/auth/shopify/callback`).
 
 Secrets stay on the server. The app only ever talks to this backend.
+
+## Live phone preview & theme
+
+Every editing page shows the real app in a phone frame on the right. It updates as you type, before anything is published. Use the dropdown to switch screens and the Light/Dark buttons to check both modes. On smaller screens, tap **Show phone**.
+
+**Theme & sizes** controls the app's colours (light and dark) and sizes: slider height and corners, tiles, category icons, deal cards, product photos and section spacing.
+
+The preview is a web copy of the app, stored in `server/app-preview`. After changing the app's code, rebuild it from the project root with `npm run build:preview` and push.
