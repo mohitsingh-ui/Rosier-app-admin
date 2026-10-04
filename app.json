@@ -15,10 +15,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#3E2415",
+        "backgroundColor": "#2A180C",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.rosierfoods.app"
@@ -27,6 +26,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withGoogleServices",
       "expo-router",
       "expo-image",
       "expo-web-browser",
@@ -47,7 +47,21 @@
           "microphonePermission": false
         }
       ],
-      "./plugins/withPaymentApps"
+      "./plugins/withPaymentApps",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#A56312",
+          "defaultChannel": "rosier_default",
+          "sounds": [
+            "./assets/sounds/rosier_chime.wav",
+            "./assets/sounds/rosier_bell.wav",
+            "./assets/sounds/rosier_coin.wav",
+            "./assets/sounds/rosier_soft.wav"
+          ]
+        }
+      ]
     ],
     "scheme": "rosier",
     "experiments": {
