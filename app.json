@@ -61,12 +61,14 @@
             "./assets/sounds/rosier_soft.wav"
           ]
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "scheme": "rosier",
     "experiments": {
       "typedRoutes": false,
-      "baseUrl": "/preview-app"
+      "baseUrl": "/preview-app",
+      "reactCompiler": true
     },
     "extra": {
       "apiUrl": "https://rosier-app-backend.onrender.com"
