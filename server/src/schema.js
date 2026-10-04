@@ -5,7 +5,7 @@
  *
  * Field types:
  *  text, textarea, number, boolean, color, image, images, link, icon,
- *  select (options), datetime, product, products, category, colors,
+ *  select (options), datetime, product, products, category, colors, video,
  *  list (of `fields`), group (of `fields`), strings (list of short texts)
  */
 
@@ -71,6 +71,8 @@ export const SCHEMA = [
               { value: 'churn', label: 'Spinning rings around one photo' },
               { value: 'coins', label: 'Falling Rosier coins' },
               { value: 'image', label: 'One big floating image' },
+              { value: 'video', label: 'Video in a rounded frame' },
+              { value: 'video_full', label: 'Full-screen video behind the text' },
             ],
           },
           { key: 'title', type: 'text', label: 'Title' },
@@ -78,6 +80,15 @@ export const SCHEMA = [
           { key: 'showLogo', type: 'boolean', label: 'Show Rosier logo above title' },
           { key: 'image', type: 'image', label: 'Main image', showIf: { art: ['churn', 'image'] } },
           { key: 'images', type: 'images', label: 'Collage photos', max: 7, showIf: { art: ['collage'] } },
+          {
+            key: 'video',
+            type: 'video',
+            label: 'Video',
+            help: 'MP4, up to 50 MB. Keep it short (5–15 seconds) and under 10 MB so it starts quickly on mobile data. Vertical 9:16 works best for full-screen. Bigger files: upload them to Shopify → Content → Files and paste the link here.',
+            showIf: { art: ['video', 'video_full'] },
+          },
+          { key: 'poster', type: 'image', label: 'Still image shown while the video loads (optional)', showIf: { art: ['video', 'video_full'] } },
+          { key: 'videoSound', type: 'boolean', label: 'Play with sound (people can still tap to mute)', showIf: { art: ['video', 'video_full'] } },
           {
             key: 'chips',
             type: 'list',

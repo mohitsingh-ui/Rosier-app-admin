@@ -6,7 +6,7 @@ notifications, maintenance mode and update prompts — without a new app release
 
 - **Admin panel:** `https://<your-backend>/admin`
 - **What the app downloads:** `GET /api/app/config` (published content only)
-- **Images you upload:** `GET /img/<id>` (optimised to WebP, add `?w=600` to resize)
+- **Images and videos you upload:** `GET /img/<id>` (images optimised to WebP, add `?w=600` to resize; MP4 videos up to 50 MB, streamed in chunks)
 
 ## How editing works
 

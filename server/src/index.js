@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import * as auth from './auth.js';
 import * as content from './content.js';
 import { connect } from './db.js';
-import { deleteImage, listImages, serveImage, storeImage } from './images.js';
+import { deleteImage, listImages, MAX_VIDEO_BYTES, serveImage, storeImage } from './images.js';
 import { listProducts } from './products.js';
 import { SCHEMA, SECTION_KEYS } from './schema.js';
 
@@ -33,6 +33,7 @@ app.use(
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
         scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com'],
         connectSrc: ["'self'"],
+        mediaSrc: ["'self'", 'blob:', 'https:'],
       },
     },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -151,7 +152,7 @@ admin.post(
   }),
 );
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 20 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_VIDEO_BYTES, files: 20 } });
 admin.get('/images', wrap(async (_req, res) => res.json({ images: await listImages() })));
 admin.post(
   '/images',
@@ -216,6 +217,7 @@ app.use('/admin', express.static(path.resolve(here, '../admin'), { index: 'index
 app.get('/', (_req, res) => res.redirect('/admin/'));
 
 app.use((err, _req, res, _next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') err.message = 'That file is too big (videos up to 50 MB, images up to 15 MB).';
   const status = err.status || (err.code === 'LIMIT_FILE_SIZE' ? 413 : 400);
   if (status >= 500 || !err.message) console.error(err);
   res.status(status).json({ error: err.message || 'Something went wrong' });

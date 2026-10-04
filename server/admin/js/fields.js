@@ -39,6 +39,7 @@ const RENDERERS = {
   boolean: booleanField,
   color: colorField,
   image: imageField,
+  video: videoField,
   images: imagesField,
   link: linkField,
   icon: iconField,
@@ -312,6 +313,76 @@ function imageField(f, obj, notify) {
           v
             ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm btn-remove', onclick: () => ((obj[f.key] = ''), render(), notify()) }, icon('trash-can-outline'), 'Remove')
             : null,
+        ),
+      ),
+    );
+  };
+  render();
+  return wrapField(f, box, { labelFor: false });
+}
+
+/** A video: upload an MP4 or paste a link (e.g. from Shopify → Content → Files). */
+function videoField(f, obj, notify) {
+  const box = h('div', { class: 'image-field video-field' });
+  const render = () => {
+    const v = obj[f.key] || '';
+    const preview = v
+      ? h('video', { class: 'image-thumb video-thumb', src: v, muted: true, loop: true, autoplay: true, playsinline: true, controls: false })
+      : h('div', { class: 'image-thumb is-empty' }, icon('video-plus-outline'));
+    if (v) preview.muted = true;
+    const src = h('p', { class: 'image-src' }, !v ? 'No video yet' : v.startsWith('/img/') ? 'Uploaded video' : 'Video from a web link');
+    fill(
+      box,
+      preview,
+      h(
+        'div',
+        { class: 'image-side' },
+        src,
+        h(
+          'div',
+          { class: 'btn-row' },
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-soft btn-sm',
+              onclick: async () => {
+                const nv = await uploadOne({ accept: 'video/mp4,video/quicktime,.mp4,.mov,.m4v' });
+                if (nv) {
+                  obj[f.key] = nv;
+                  render();
+                  notify();
+                }
+              },
+            },
+            icon('upload'),
+            'Upload video',
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-soft btn-sm',
+              onclick: async () => {
+                const nv = await promptDialog({
+                  title: 'Paste a video link',
+                  label: 'Video link (.mp4)',
+                  placeholder: 'https://cdn.shopify.com/videos/…mp4',
+                  help: 'In Shopify admin go to Content → Files, upload your MP4, then copy its link and paste it here.',
+                  ok: 'Use this video',
+                  validate: (s) => (/^https:\/\/\S+$/i.test(s) ? '' : 'The link should start with https://'),
+                });
+                if (nv) {
+                  obj[f.key] = nv.trim();
+                  render();
+                  notify();
+                }
+              },
+            },
+            icon('link-variant'),
+            'Paste link',
+          ),
+          v ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm btn-remove', onclick: () => ((obj[f.key] = ''), render(), notify()) }, icon('trash-can-outline'), 'Remove') : null,
         ),
       ),
     );

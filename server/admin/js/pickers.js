@@ -150,19 +150,20 @@ export function uploadZone({ onUploaded, compact = false }) {
   return { el: zone, input, send };
 }
 
-/** Opens the OS file chooser and uploads one image. Resolves with "/img/<id>" or null. */
-export function uploadOne() {
+/** Opens the OS file chooser and uploads one file. Resolves with "/img/<id>" or null. */
+export function uploadOne({ accept = 'image/*' } = {}) {
   return new Promise((resolve) => {
-    const input = h('input', { type: 'file', accept: 'image/*', hidden: true });
+    const input = h('input', { type: 'file', accept, hidden: true });
     document.body.appendChild(input);
     input.addEventListener('change', async () => {
       const f = input.files[0];
       input.remove();
       if (!f) return resolve(null);
-      const t = h('div', { class: 'upload-pill' }, icon('loading', 'spin'), ` Uploading ${f.name}…`);
+      const label = h('span', null, ` Uploading ${f.name}…`);
+      const t = h('div', { class: 'upload-pill' }, icon('loading', 'spin'), label);
       document.body.appendChild(t);
       try {
-        const r = await api.upload([f]);
+        const r = await api.upload([f], (p) => (label.textContent = ` Uploading ${f.name}… ${Math.round(p * 100)}%`));
         if (r.errors?.length) toast(`Couldn't upload ${r.errors[0]}`, 'error');
         resolve(r.images?.[0]?.url || null);
       } catch (e) {
@@ -193,7 +194,7 @@ export function pickFromLibrary() {
 
   async function load() {
     try {
-      const { images } = await api.get('/images');
+      const images = (await api.get('/images')).images.filter((i) => !String(i.mime).startsWith('video/'));
       clear(grid);
       if (!images.length) add(grid, h('p', { class: 'empty-note' }, 'No images yet. Upload your first one above.'));
       for (const img of images) {

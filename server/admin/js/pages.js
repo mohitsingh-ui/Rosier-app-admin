@@ -231,12 +231,18 @@ export function imagesPage(root) {
           h(
             'figure',
             { class: 'lib-card' },
-            h('a', { class: 'lib-thumb', href: img.url, target: '_blank', rel: 'noopener', title: 'Open full size' }, h('img', { src: `${img.url}?w=400`, alt: img.name || '', loading: 'lazy' })),
+            h(
+              'a',
+              { class: 'lib-thumb', href: img.url, target: '_blank', rel: 'noopener', title: 'Open full size' },
+              String(img.mime).startsWith('video/')
+                ? h('video', { src: img.url, muted: true, loop: true, playsinline: true, preload: 'metadata', onmouseenter: (e) => e.target.play(), onmouseleave: (e) => e.target.pause() })
+                : h('img', { src: `${img.url}?w=400`, alt: img.name || '', loading: 'lazy' }),
+            ),
             h(
               'figcaption',
               null,
               h('strong', { class: 'lib-name', title: img.name || '' }, img.name || 'Untitled'),
-              h('span', { class: 'lib-meta' }, `${img.width} × ${img.height} · ${fileSize(img.size)}`),
+              h('span', { class: 'lib-meta' }, String(img.mime).startsWith('video/') ? `Video · ${fileSize(img.size)}` : `${img.width} × ${img.height} · ${fileSize(img.size)}`),
               h('span', { class: 'lib-meta', title: fullDate(img.created_at) }, `Added ${relTime(img.created_at)}`),
               used.length ? h('span', { class: 'badge badge-live', title: used.map((s) => s.title).join(', ') }, `In use · ${used.length} section${used.length > 1 ? 's' : ''}`) : null,
               h(

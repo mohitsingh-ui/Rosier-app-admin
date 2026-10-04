@@ -1,7 +1,10 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEvent } from 'expo';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -43,7 +46,51 @@ const COLLAGE = [
   { x: 0.42, y: 290, size: 78, rot: 12, depth: 0.5 },
 ];
 
-type Slide = { id?: string; enabled?: boolean; art: string; showLogo?: boolean; title: string; sub: string; image: string; images: string[]; chips: { icon: string; label: string }[]; showNameInput?: boolean };
+type Slide = {
+  id?: string;
+  enabled?: boolean;
+  art: string;
+  showLogo?: boolean;
+  title: string;
+  sub: string;
+  image: string;
+  images: string[];
+  chips: { icon: string; label: string }[];
+  showNameInput?: boolean;
+  video?: string;
+  poster?: string;
+  videoSound?: boolean;
+};
+
+/* A looping video that plays only while its slide is on screen. */
+function SlideVideo({ uri, poster, active, sound, w, h, radius = 0, muteTop = 0 }: { uri: string; poster?: string; active: boolean; sound?: boolean; w: number; h: number; radius?: number; muteTop?: number }) {
+  const player = useVideoPlayer(uri, (p) => {
+    p.loop = true;
+    p.muted = !sound;
+  });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
+  const [muted, setMuted] = useState(!sound);
+  useEffect(() => {
+    if (active) player.play();
+    else player.pause();
+  }, [active, player]);
+  useEffect(() => {
+    player.muted = muted;
+  }, [muted, player]);
+  return (
+    <View style={{ width: w, height: h, overflow: 'hidden', borderRadius: radius, backgroundColor: '#2B1A10' }}>
+      <VideoView player={player} style={{ width: w, height: h }} contentFit="cover" nativeControls={false} />
+      {!!poster && status !== 'readyToPlay' && <Img source={poster} style={{ position: 'absolute', top: 0, left: 0, width: w, height: h }} contentFit="cover" />}
+      <Pressable
+        onPress={() => setMuted((m) => !m)}
+        hitSlop={10}
+        style={{ position: 'absolute', right: 12, ...(muteTop ? { top: muteTop } : { bottom: 12 }), width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <MaterialCommunityIcons name={muted ? 'volume-off' : 'volume-high'} size={18} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
 
 /* Decorative wheat sprig that sways in the corner */
 function Sprig() {
@@ -242,6 +289,8 @@ export default function Onboarding() {
   };
 
   const artH = height * 0.52;
+  // Framed videos are portrait (9:16) and fit inside the art area.
+  const frameW = Math.min(width * 0.62, ((artH - 20) * 9) / 16);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: BG }}>
@@ -258,7 +307,13 @@ export default function Onboarding() {
       >
         {SLIDES.map((s, i) => (
           <View key={s.id ?? i} style={{ width, paddingTop: insets.top + 50 }}>
-            <View style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>
+            {s.art === 'video_full' && !!s.video && (
+              <View style={{ position: 'absolute', top: 0, left: 0, width, height }}>
+                <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={height} muteTop={insets.top + 12} />
+                <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+              </View>
+            )}
+            <View pointerEvents="box-none" style={{ height: artH, alignItems: 'center', justifyContent: 'center' }}>
               {s.art === 'collage' && (
                 <View style={{ width, height: artH }}>
                   {(s.images ?? []).slice(0, COLLAGE.length).map((uri, k) => (
@@ -269,8 +324,13 @@ export default function Onboarding() {
               {s.art === 'churn' && !!s.image && <Churn uri={s.image} size={Math.min(width * 0.82, artH)} />}
               {s.art === 'coins' && <CoinRain width={width} />}
               {s.art === 'image' && !!s.image && <BigImage uri={s.image} size={Math.min(width * 0.86, artH)} />}
+              {s.art === 'video' && !!s.video && (
+                <Animated.View entering={FadeIn.duration(500)}>
+                  <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} radius={28} w={frameW} h={frameW * (16 / 9)} />
+                </Animated.View>
+              )}
             </View>
-            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={accent} />
+            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={accent} light={s.art === 'video_full' && !!s.video} />
             {!!s.chips?.length && page === i && <Steps chips={s.chips} accent={accent} />}
             {!!s.showNameInput && (
               <Animated.View entering={FadeIn.delay(200)} style={{ paddingHorizontal: 28, marginTop: 16 }}>
@@ -308,7 +368,7 @@ export default function Onboarding() {
         </View>
         {page < SLIDES.length - 1 && (
           <Pressable onPress={finish} hitSlop={12} style={{ marginRight: 18 }}>
-            <Text style={{ fontFamily: fonts.sansMedium, color: '#8B7B6E', fontSize: 15 }}>{ob.skipLabel}</Text>
+            <Text style={{ fontFamily: fonts.sansMedium, color: SLIDES[page]?.art === 'video_full' ? '#FFFFFF' : '#8B7B6E', fontSize: 15 }}>{ob.skipLabel}</Text>
           </Pressable>
         )}
         <NextButton last={page >= SLIDES.length - 1} label={ob.buttonLabel} onPress={next} />
@@ -317,7 +377,7 @@ export default function Onboarding() {
   );
 }
 
-function SlideText({ index, x, width, title, sub, logo, accent }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string }) {
+function SlideText({ index, x, width, title, sub, logo, accent, light }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean }) {
   const a = useAnimatedStyle(() => {
     const p = (x.value - index * width) / width;
     return {
@@ -329,11 +389,11 @@ function SlideText({ index, x, width, title, sub, logo, accent }: { index: numbe
     <Animated.View style={[{ paddingHorizontal: 28, marginTop: 10 }, a]}>
       {logo && (
         <View style={{ marginBottom: 6, marginLeft: -6 }}>
-          <RosierLogo width={110} color="#5A3520" />
+          <RosierLogo width={110} color={light ? '#FFFFFF' : '#5A3520'} />
         </View>
       )}
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 34, color: accent, letterSpacing: 0.5 }}>{title}</Text>
-      <Text style={{ fontFamily: fonts.sans, fontSize: 15, color: '#7A6453', marginTop: 4, lineHeight: 22 }}>{sub}</Text>
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 34, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }}>{title}</Text>
+      <Text style={{ fontFamily: fonts.sans, fontSize: 15, color: light ? 'rgba(255,255,255,0.9)' : '#7A6453', marginTop: 4, lineHeight: 22 }}>{sub}</Text>
     </Animated.View>
   );
 }

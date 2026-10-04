@@ -2087,3 +2087,18 @@ textarea.input {
     display: none;
   }
 }
+
+/* Videos */
+video.video-thumb {
+  display: block;
+  width: 104px;
+  height: 160px;
+  object-fit: cover;
+  background: #2b1a10;
+}
+.lib-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #2b1a10;
+}
