@@ -44,6 +44,8 @@ const ROUTE_FOR = {
   theme: '/home',
   effects: '/home',
   coupons: '/coupons',
+  rewards: '/cart',
+  push: '/home',
   tracking: '/track',
   general: '/home',
 };

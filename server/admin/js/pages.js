@@ -193,6 +193,57 @@ export function sectionPage(root, key) {
       h('a', { class: 'btn btn-ghost', href: '#/push' }, icon('send-outline'), 'Send a notification'),
     );
   }
+  if (key === 'rewards') {
+    extras.push(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost',
+          title: 'Copies your active Shopify automatic discounts (free gifts, order-amount offers, free shipping)',
+          onclick: async (ev) => {
+            const b = ev.currentTarget;
+            b.disabled = true;
+            try {
+              const { rewards } = await api.get('/shopify/automatic-discounts');
+              doc.items = Array.isArray(doc.items) ? doc.items : [];
+              let n = 0;
+              for (const r of rewards) {
+                const same = doc.items.find((x) => Number(x.minAmount) === r.minAmount && x.kind === r.kind);
+                if (same) {
+                  if (r.variantId && !same.variantId) Object.assign(same, { variantId: r.variantId, giftTitle: same.giftTitle || r.giftTitle, giftImage: same.giftImage || r.giftImage });
+                  continue;
+                }
+                doc.items.push({
+                  id: randomId(),
+                  enabled: true,
+                  qty: 1,
+                  autoAdd: true,
+                  variantId: '',
+                  giftTitle: '',
+                  giftImage: '',
+                  lockedText: r.kind === 'gift' ? 'Add ₹{left} more to get a FREE {gift}' : r.kind === 'shipping' ? 'Add ₹{left} more for FREE shipping' : 'Add ₹{left} more to unlock {gift}',
+                  unlockedText: r.kind === 'gift' ? 'Yay! You’ve unlocked a FREE {gift} 🎉' : r.kind === 'shipping' ? 'You’ve unlocked FREE shipping 🚚' : '{gift} unlocked 🎉',
+                  ...r,
+                });
+                n++;
+              }
+              doc.items.sort((a, b) => Number(a.minAmount) - Number(b.minAmount));
+              renderForm();
+              changed();
+              toast(rewards.length ? `Found ${rewards.length} automatic discount${rewards.length > 1 ? 's' : ''} in Shopify${n ? `, added ${n}` : ''}. Check them, then publish.` : 'No active automatic discounts with a minimum amount in Shopify.', rewards.length ? 'ok' : 'info');
+            } catch (e) {
+              toast(e.message, 'error');
+            } finally {
+              b.disabled = false;
+            }
+          },
+        },
+        icon('cloud-download-outline'),
+        'Import from Shopify',
+      ),
+    );
+  }
   if (key === 'coupons') {
     extras.push(
       h(

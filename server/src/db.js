@@ -96,7 +96,28 @@ async function migrate(db) {
        created_at timestamptz not null default now(),
        last_seen timestamptz not null default now()
      )`,
+    `alter table push_devices add column if not exists push_ok boolean`,
     `create index if not exists push_devices_customer on push_devices (customer_id)`,
+    // Expo tickets we still need a receipt for (tells us if Firebase/Apple really took it).
+    `create table if not exists push_tickets (
+       id text primary key,
+       token text not null,
+       device_id text,
+       title text not null,
+       body text not null default '',
+       data jsonb not null default '{}',
+       created_at timestamptz not null default now()
+     )`,
+    // Messages for phones without working push: the app picks them up in the background (every ~15 min) and on open.
+    `create table if not exists push_outbox (
+       id serial primary key,
+       device_id text not null,
+       title text not null,
+       body text not null default '',
+       data jsonb not null default '{}',
+       created_at timestamptz not null default now()
+     )`,
+    `create index if not exists push_outbox_device on push_outbox (device_id, id)`,
     `create index if not exists push_devices_device on push_devices (device_id)`,
     // Every notification sent (admin campaigns + order updates), for history and de-duplication.
     `create table if not exists push_log (

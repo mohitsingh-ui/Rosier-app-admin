@@ -52,7 +52,13 @@
         "showNameInput": false,
         "video": "",
         "poster": "",
-        "videoSound": false
+        "videoSound": false,
+        "colors": [
+          "#FBE3C6",
+          "#FF9F43",
+          "#F368E0",
+          "#FECA57"
+        ]
       },
       {
         "id": "bilona",
@@ -84,7 +90,13 @@
         "showNameInput": false,
         "video": "",
         "poster": "",
-        "videoSound": false
+        "videoSound": false,
+        "colors": [
+          "#FFF1D6",
+          "#E1A140",
+          "#FF6B6B",
+          "#48DBFB"
+        ]
       },
       {
         "id": "coins",
@@ -99,9 +111,16 @@
         "showNameInput": true,
         "video": "",
         "poster": "",
-        "videoSound": false
+        "videoSound": false,
+        "colors": [
+          "#FFE8CF",
+          "#F9CA24",
+          "#6AB04C",
+          "#E056FD"
+        ]
       }
-    ]
+    ],
+    "vibrant": true
   },
   "popup": {
     "enabled": false,
@@ -1114,5 +1133,28 @@
       }
     },
     "liveCard": true
+  },
+  "rewards": {
+    "enabled": true,
+    "showBar": true,
+    "barTitle": "Unlock rewards",
+    "items": [
+      {
+        "id": "pickle-gift",
+        "enabled": true,
+        "kind": "gift",
+        "title": "🎁 Pickle Mystery Gift",
+        "minAmount": 1999,
+        "variantId": "",
+        "giftTitle": "Pickle Mystery Gift",
+        "giftImage": "",
+        "qty": 1,
+        "autoAdd": true,
+        "lockedText": "Add ₹{left} more to get a FREE {gift}",
+        "unlockedText": "Yay! You’ve unlocked a FREE {gift} 🎉",
+        "startAt": "",
+        "endAt": ""
+      }
+    ]
   }
 }

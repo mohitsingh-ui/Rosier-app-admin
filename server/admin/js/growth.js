@@ -223,6 +223,7 @@ export function pushPage(root) {
           'div',
           { class: 'kpis' },
           kpi('Phones with notifications on', String(s.devices), null, `Android ${s.android} · iPhone ${s.ios}`),
+          kpi('Getting instant push', String(s.push_ok ?? 0), null, s.background ? `${s.background} on the 15-minute background check (finish the Firebase setup for instant)` : 'confirmed by Firebase / Apple'),
           kpi('Logged-in customers', String(s.logged_in)),
           kpi('Members', String(s.members)),
         ),

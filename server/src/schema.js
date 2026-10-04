@@ -56,6 +56,7 @@ export const SCHEMA = [
     description: 'The slides people see the first time they open the app. Raise "Show again version" to show them to everyone once more.',
     fields: [
       { key: 'reshowVersion', type: 'number', label: 'Show again version', help: 'Increase by 1 and publish: every user sees the intro slides again on their next app open.' },
+      { key: 'vibrant', type: 'boolean', label: 'Colourful animated background (glowing colours, sparkles, 3D swipe, confetti at the end)', help: 'Off = the plain background colour below.' },
       { key: 'background', type: 'color', label: 'Background colour' },
       { key: 'accent', type: 'color', label: 'Title colour' },
       { key: 'skipLabel', type: 'text', label: 'Skip button text' },
@@ -70,6 +71,7 @@ export const SCHEMA = [
         newItem: { enabled: true, art: 'image', showLogo: false, title: 'NEW SLIDE', sub: '', image: '', images: [], chips: [], showNameInput: false },
         fields: [
           { key: 'enabled', type: 'boolean', label: 'Show this slide' },
+          { key: 'colors', type: 'colors', label: 'Slide colours (colourful background)', help: '1st = background, then up to 3 glow colours. The background flows between slides as people swipe.' },
           {
             key: 'art',
             type: 'select',
@@ -748,6 +750,48 @@ export const SCHEMA = [
       faq('FAQs'),
       { key: 'company', type: 'text', label: 'Company name' },
       { key: 'address', type: 'textarea', label: 'Address' },
+    ],
+  },
+  {
+    key: 'rewards',
+    title: 'Cart rewards & free gifts',
+    icon: 'gift-open-outline',
+    description: 'Like the website: “Add ₹X more to get a free gift”. When the cart reaches the amount, the gift is added automatically (and removed if the cart drops below). Use “Import from Shopify” to copy your automatic discounts.',
+    fields: [
+      { key: 'enabled', type: 'boolean', label: 'Cart rewards on' },
+      { key: 'showBar', type: 'boolean', label: 'Show the progress bar in the cart' },
+      { key: 'barTitle', type: 'text', label: 'Progress bar title' },
+      {
+        key: 'items',
+        type: 'list',
+        label: 'Rewards (lowest amount first)',
+        help: 'For a free gift the gift must really be free at checkout: create it in Shopify as an automatic “Buy X get Y” / free-gift discount (as on the website), or use a ₹0 product.',
+        itemLabel: '{title} — ₹{minAmount}',
+        newItem: { enabled: true, kind: 'gift', title: '🎁 Free gift', minAmount: 999, variantId: '', giftTitle: '', giftImage: '', qty: 1, autoAdd: true, lockedText: 'Add ₹{left} more to get a FREE {gift}', unlockedText: '{gift} added free to your order', startAt: '', endAt: '' },
+        fields: [
+          { key: 'enabled', type: 'boolean', label: 'On' },
+          {
+            key: 'kind',
+            type: 'select',
+            label: 'Reward',
+            options: [
+              { value: 'gift', label: 'Free gift (added to the cart automatically)' },
+              { value: 'shipping', label: 'Free shipping (message only)' },
+              { value: 'info', label: 'Other offer (message only, e.g. extra % off at checkout)' },
+            ],
+          },
+          { key: 'title', type: 'text', label: 'Name shown on the progress bar', help: 'e.g. 🎁 Pickle Mystery Gift' },
+          { key: 'minAmount', type: 'number', label: 'Cart amount needed (₹)' },
+          { key: 'variantId', type: 'text', label: 'Gift: Shopify variant ID', help: 'The number from Shopify → product → variant URL (…/variants/12345). The product can be hidden from the website.', showIf: { kind: ['gift'] } },
+          { key: 'giftTitle', type: 'text', label: 'Gift name in the cart', showIf: { kind: ['gift'] } },
+          { key: 'giftImage', type: 'image', label: 'Gift picture', showIf: { kind: ['gift'] } },
+          { key: 'qty', type: 'number', label: 'How many', showIf: { kind: ['gift'] } },
+          { key: 'autoAdd', type: 'boolean', label: 'Add it to the cart automatically', showIf: { kind: ['gift'] } },
+          { key: 'lockedText', type: 'text', label: 'Text before unlocking', help: '{left} = amount still needed, {gift} = gift name, {amount} = target.' },
+          { key: 'unlockedText', type: 'text', label: 'Text once unlocked' },
+          ...schedule,
+        ],
+      },
     ],
   },
   {

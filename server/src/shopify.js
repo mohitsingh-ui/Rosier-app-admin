@@ -684,6 +684,55 @@ export async function adminDiscountCodes() {
     .filter(Boolean);
 }
 
+/** Active automatic discounts (free gifts, order-amount offers, free shipping) → cart rewards. */
+export async function adminAutomaticRewards() {
+  const min = `minimumRequirement { __typename ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } } }`;
+  let data;
+  try {
+    data = await adminData(`{
+      automaticDiscountNodes(first: 30, query: "status:active") {
+        nodes {
+          id
+          automaticDiscount {
+            __typename
+            ... on DiscountAutomaticBxgy {
+              title startsAt endsAt
+              customerBuys { value { __typename ... on DiscountPurchaseAmount { amount } ... on DiscountQuantity { quantity } } }
+              customerGets { items { __typename
+                ... on DiscountProducts { productVariants(first: 3) { nodes { id title product { title featuredMedia { preview { image { url } } } } } } products(first: 3) { nodes { title featuredMedia { preview { image { url } } } variants(first: 1) { nodes { id } } } } } } }
+            }
+            ... on DiscountAutomaticBasic { title startsAt endsAt ${min} }
+            ... on DiscountAutomaticFreeShipping { title startsAt endsAt ${min} }
+          }
+        }
+      }
+    }`);
+  } catch (e) {
+    if (/access|scope|denied/i.test(e.message)) throw new ShopifyError('Your Shopify app needs the read_discounts permission (Shopify connection → Admin API).', 403);
+    throw e;
+  }
+  const out = [];
+  for (const n of data?.automaticDiscountNodes?.nodes ?? []) {
+    const d = n.automaticDiscount ?? {};
+    const base = { title: d.title, startAt: d.startsAt ?? '', endAt: d.endsAt ?? '' };
+    if (d.__typename === 'DiscountAutomaticBxgy') {
+      const amt = Math.round(Number(d.customerBuys?.value?.amount ?? 0));
+      const items = d.customerGets?.items ?? {};
+      const v = items.productVariants?.nodes?.[0];
+      const p = items.products?.nodes?.[0];
+      const vid = v?.id ?? p?.variants?.nodes?.[0]?.id;
+      const variantId = vid ? String(vid).split('/').pop() : '';
+      const name = v ? `${v.product?.title ?? ''}${v.title && v.title !== 'Default Title' ? ` (${v.title})` : ''}` : (p?.title ?? d.title);
+      const image = v?.product?.featuredMedia?.preview?.image?.url ?? p?.featuredMedia?.preview?.image?.url ?? '';
+      if (amt > 0) out.push({ ...base, kind: 'gift', minAmount: amt, variantId, giftTitle: name, giftImage: image });
+    } else {
+      const amt = Math.round(Number(d.minimumRequirement?.greaterThanOrEqualToSubtotal?.amount ?? 0));
+      if (amt > 0) out.push({ ...base, kind: d.__typename === 'DiscountAutomaticFreeShipping' ? 'shipping' : 'info', minAmount: amt });
+    }
+  }
+  return out;
+}
+
 /* ───────── "Test connection" buttons ───────── */
 
 export async function testConnection(kind) {

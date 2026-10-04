@@ -220,6 +220,7 @@ app.post(
 
 /* Phone notifications + app usage (public, called by the app). */
 app.post('/api/push/register', wrap(async (req, res) => res.json(await push.register(req.body || {}))));
+app.get('/api/push/pending', wrap(async (req, res) => res.json({ messages: await push.pending(String(req.query.deviceId || ''), req.query.after) })));
 app.post('/api/push/unregister', wrap(async (req, res) => (await push.unregister(String(req.body?.token || '')), res.json({ ok: true }))));
 app.post('/api/app/ping', wrap(async (req, res) => res.json(await analytics.ping(req.body || {}))));
 
@@ -405,6 +406,7 @@ admin.post(
 admin.get('/app-products', wrap(async (_req, res) => res.json(await catalog.adminView())));
 admin.put('/app-products', wrap(async (req, res) => res.json(await catalog.saveSetting(req.body || {}, req.admin.email))));
 admin.get('/analytics', wrap(async (req, res) => res.json(await analytics.dashboard(Number(req.query.days) || 7))));
+admin.get('/shopify/automatic-discounts', wrap(async (_req, res) => res.json({ rewards: await shopify.adminAutomaticRewards() })));
 admin.get('/shopify/discounts', wrap(async (_req, res) => res.json({ codes: await shopify.adminDiscountCodes() })));
 admin.get('/shopify/customers', wrap(async (req, res) => res.json(await shopify.adminCustomers({ search: String(req.query.search || ''), after: req.query.after || null }))));
 admin.post(

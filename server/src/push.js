@@ -13,6 +13,8 @@ import { query } from './db.js';
 import * as shopify from './shopify.js';
 
 const EXPO_URL = process.env.EXPO_PUSH_URL || 'https://exp.host/--/api/v2/push/send';
+const RECEIPTS_URL = process.env.EXPO_RECEIPTS_URL || EXPO_URL.replace(/\/send$/, '/getReceipts');
+const isExpoToken = (t) => /^(ExponentPushToken|ExpoPushToken)\[.+\]$/.test(t);
 export const SOUNDS = ['default', 'chime', 'bell', 'coin', 'soft'];
 
 const tail = (gid) => (gid ? String(gid).split('/').pop() : null);
@@ -20,16 +22,28 @@ const clip = (s, n) => String(s ?? '').slice(0, n);
 
 /* ───────── Devices ───────── */
 
+/**
+ * A phone with notifications allowed. `token` is its Expo push token; phones that
+ * couldn't get one (no Firebase yet) register with only `deviceId` and get their
+ * notifications through the background check instead.
+ */
 export async function register({ token, deviceId, platform, customerId, email, phone, name, member }) {
-  const t = clip(token, 300);
-  if (!/^(ExponentPushToken|ExpoPushToken)\[.+\]$/.test(t)) throw Object.assign(new Error('Not a push token'), { status: 400 });
+  const dev = clip(deviceId, 80);
+  let t = clip(token, 300);
+  if (!isExpoToken(t)) {
+    if (!/^[\w-]{6,80}$/.test(dev)) throw Object.assign(new Error('Not a push token'), { status: 400 });
+    t = `device:${dev}`;
+  } else if (dev) {
+    // Real push works for this phone now: retire its fallback row.
+    await query('update push_devices set enabled = false where token = $1', [`device:${dev}`]);
+  }
   await query(
     `insert into push_devices (token, device_id, platform, customer_id, email, phone, name, member, enabled, last_seen)
      values ($1, $2, $3, $4, $5, $6, $7, $8, true, now())
      on conflict (token) do update set device_id = $2, platform = $3, customer_id = $4, email = $5, phone = $6, name = $7, member = $8, enabled = true, last_seen = now()`,
-    [t, clip(deviceId, 80), clip(platform, 20), tail(customerId), clip(email, 200) || null, clip(phone, 40) || null, clip(name, 80) || null, !!member],
+    [t, dev, clip(platform, 20), tail(customerId), clip(email, 200) || null, clip(phone, 40) || null, clip(name, 80) || null, !!member],
   );
-  return { ok: true };
+  return { ok: true, mode: t.startsWith('device:') ? 'background' : 'push' };
 }
 
 export async function unregister(token) {
@@ -42,7 +56,9 @@ export async function stats() {
             count(*) filter (where enabled and customer_id is not null)::int as logged_in,
             count(*) filter (where enabled and member)::int as members,
             count(*) filter (where enabled and platform = 'android')::int as android,
-            count(*) filter (where enabled and platform = 'ios')::int as ios
+            count(*) filter (where enabled and platform = 'ios')::int as ios,
+            count(*) filter (where enabled and (token like 'device:%' or push_ok = false))::int as background,
+            count(*) filter (where enabled and push_ok)::int as push_ok
        from push_devices`,
   );
   return rows[0];
@@ -57,8 +73,8 @@ async function tokensFor(audience) {
       guests: 'customer_id is null',
       non_members: 'not member',
     }[audience] ?? 'true';
-  const { rows } = await query(`select token from push_devices where enabled and ${where}`);
-  return rows.map((r) => r.token);
+  const { rows } = await query(`select token, device_id, push_ok from push_devices where enabled and ${where}`);
+  return rows;
 }
 
 /* ───────── Sending ───────── */
@@ -68,34 +84,94 @@ function soundFields(sound) {
   return s === 'default' ? { sound: 'default', channelId: 'rosier_default' } : { sound: `rosier_${s}.wav`, channelId: `rosier_${s}` };
 }
 
-/** Sends one message to many phones. Returns {sent, failed}. Dead tokens are switched off. */
-export async function sendTo(tokens, { title, body, data = {}, sound = 'default' }) {
-  const list = [...new Set(tokens)].filter(Boolean);
+const outbox = (deviceId, title, body, data) =>
+  deviceId ? query('insert into push_outbox (device_id, title, body, data) values ($1, $2, $3, $4)', [deviceId, clip(title, 120), clip(body, 400), JSON.stringify(data)]) : null;
+
+/**
+ * Sends one message to many phones ({token, device_id, push_ok} rows).
+ * Real push via Expo; phones without working push get it in their outbox instead.
+ */
+export async function sendTo(targets, { title, body, data = {}, sound = 'default' }) {
+  data = { ...data, sound };
+  const seen = new Set();
+  const list = targets.filter((x) => x?.token && !seen.has(x.token) && seen.add(x.token));
   let sent = 0;
   let failed = 0;
+  const viaPush = [];
+  for (const x of list) {
+    if (!isExpoToken(x.token) || x.push_ok === false) {
+      await outbox(x.device_id, title, body, data);
+      sent++;
+    } else viaPush.push(x);
+  }
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate' };
   if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
-  for (let i = 0; i < list.length; i += 100) {
-    const batch = list.slice(i, i + 100);
-    const messages = batch.map((to) => ({ to, title: clip(title, 120), body: clip(body, 400), data, priority: 'high', ...soundFields(sound) }));
+  for (let i = 0; i < viaPush.length; i += 100) {
+    const batch = viaPush.slice(i, i + 100);
+    const messages = batch.map((x) => ({ to: x.token, title: clip(title, 120), body: clip(body, 400), data, priority: 'high', ...soundFields(sound) }));
+    let tickets = [];
     try {
       const res = await fetch(EXPO_URL, { method: 'POST', headers, body: JSON.stringify(messages) });
       const json = await res.json().catch(() => ({}));
-      const tickets = Array.isArray(json.data) ? json.data : [];
-      for (let k = 0; k < batch.length; k++) {
-        const t = tickets[k];
-        if (t?.status === 'ok') sent++;
-        else {
-          failed++;
-          if (t?.details?.error === 'DeviceNotRegistered') await unregister(batch[k]);
-        }
-      }
-      if (!tickets.length) failed += batch.length;
+      tickets = Array.isArray(json.data) ? json.data : [];
     } catch {
-      failed += batch.length;
+      tickets = [];
+    }
+    for (let k = 0; k < batch.length; k++) {
+      const x = batch[k];
+      const t = tickets[k];
+      if (t?.status === 'ok') {
+        sent++;
+        if (t.id) await query('insert into push_tickets (id, token, device_id, title, body, data) values ($1, $2, $3, $4, $5, $6) on conflict do nothing', [t.id, x.token, x.device_id, clip(title, 120), clip(body, 400), JSON.stringify(data)]);
+      } else if (t?.details?.error === 'DeviceNotRegistered') {
+        failed++;
+        await unregister(x.token);
+      } else {
+        // Push isn't working for this phone (e.g. Firebase not set up) — use the background check.
+        await query('update push_devices set push_ok = false where token = $1', [x.token]);
+        await outbox(x.device_id, title, body, data);
+        sent++;
+      }
     }
   }
   return { sent, failed };
+}
+
+/** Expo receipts say whether Firebase/Apple really accepted each push; failed ones go to the outbox. */
+export async function checkReceipts() {
+  const { rows } = await query("select * from push_tickets where created_at < now() - interval '30 seconds' order by created_at limit 300");
+  if (!rows.length) return;
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+  if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+  let receipts = {};
+  try {
+    const res = await fetch(RECEIPTS_URL, { method: 'POST', headers, body: JSON.stringify({ ids: rows.map((r) => r.id) }) });
+    receipts = (await res.json())?.data ?? {};
+  } catch {
+    return;
+  }
+  for (const r of rows) {
+    const rc = receipts[r.id];
+    const old = Date.now() - new Date(r.created_at).getTime() > 24 * 3600 * 1000;
+    if (!rc && !old) continue; // not ready yet
+    if (rc?.status === 'ok') await query('update push_devices set push_ok = true where token = $1', [r.token]);
+    else if (rc?.details?.error === 'DeviceNotRegistered') await unregister(r.token);
+    else if (rc) {
+      await query('update push_devices set push_ok = false where token = $1', [r.token]);
+      await outbox(r.device_id, r.title, r.body, r.data);
+    }
+    await query('delete from push_tickets where id = $1', [r.id]);
+  }
+}
+
+/** The app asks for messages it hasn't shown yet (background check / app open). */
+export async function pending(deviceId, after = 0) {
+  const { rows } = await query(
+    "select id, title, body, data from push_outbox where device_id = $1 and id > $2 and created_at > now() - interval '3 days' order by id limit 20",
+    [clip(deviceId, 80), Number(after) || 0],
+  );
+  await query("delete from push_outbox where created_at < now() - interval '4 days'");
+  return rows;
 }
 
 async function soundSetting() {
@@ -114,6 +190,7 @@ export async function campaign({ title, body, link = '', audience = 'all', kind 
   }
   const tokens = await tokensFor(audience);
   const id = ref || `c-${Date.now().toString(36)}`;
+  if (!tokens.length) throw Object.assign(new Error('No phones have notifications turned on yet. People need the new app version and to tap “Turn on notifications”.'), { status: 400 });
   const r = await sendTo(tokens, { title, body, sound: cfg.sound, data: { id, link, kind } });
   await query('insert into push_log (kind, ref, title, body, audience, sent, failed, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict do nothing', [
     kind,
@@ -179,8 +256,8 @@ const DEFAULT_TEXT = {
 async function devicesForOrder(o) {
   const cust = tail(o.customer?.id);
   const dev = (o.customAttributes ?? []).find((a) => a.key === 'app_device')?.value;
-  const { rows } = await query('select token from push_devices where enabled and ((customer_id is not null and customer_id = $1) or (device_id is not null and device_id = $2))', [cust ?? '', dev ?? '']);
-  return rows.map((r) => r.token);
+  const { rows } = await query('select token, device_id, push_ok from push_devices where enabled and ((customer_id is not null and customer_id = $1) or (device_id is not null and device_id = $2))', [cust ?? '', dev ?? '']);
+  return rows;
 }
 
 /** Looks at one order and notifies the customer if its status moved on. */
@@ -232,6 +309,7 @@ export async function poll() {
   try {
     const s = await shopify.getSettings();
     if (!s.shopDomain || !(s.adminToken || (s.adminClientId && s.adminClientSecret))) return;
+    await checkReceipts().catch(() => {});
     const { rows } = await query('select count(*)::int as n from push_devices where enabled');
     if (!rows[0].n) return;
     const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
