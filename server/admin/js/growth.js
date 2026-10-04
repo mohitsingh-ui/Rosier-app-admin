@@ -219,11 +219,12 @@ export function pushPage(root) {
       const s = r.stats;
       fill(
         body,
+        firebaseCard(r.firebase, load),
         h(
           'div',
           { class: 'kpis' },
           kpi('Phones with notifications on', String(s.devices), null, `Android ${s.android} · iPhone ${s.ios}`),
-          kpi('Getting instant push', String(s.push_ok ?? 0), null, s.background ? `${s.background} on the 15-minute background check (finish the Firebase setup for instant)` : 'confirmed by Firebase / Apple'),
+          kpi('Getting instant push', String(s.push_ok ?? 0), null, s.background ? `${s.background} on the 15-minute background check${r.firebase?.configured ? ' (old app version — they need the new build)' : ' (connect Firebase above for instant)'}` : 'confirmed by Firebase / Apple'),
           kpi('Logged-in customers', String(s.logged_in)),
           kpi('Members', String(s.members)),
         ),
@@ -277,6 +278,84 @@ export function pushPage(root) {
   add(root, h('div', { class: 'page page-wide' }, pageHead('cellphone-message', 'Push notifications', 'Pop-up notifications on customers’ phones — even when the app is closed. Order updates are sent automatically.'), body));
   load();
   return () => {};
+}
+
+/** Firebase key: makes notifications show in the phone's notification bar instantly, even with the app closed. */
+function firebaseCard(fb, reload) {
+  const out = h('span', { class: 'test-result' });
+  const run = async (fn, busy) => {
+    fill(out, h('span', { class: 'test-result' }, icon('loading', 'spin'), ` ${busy}`));
+    try {
+      const r = await fn();
+      fill(out, h('span', { class: 'test-result ok' }, icon('check-circle'), ` ${r.message || 'Saved.'}`));
+      return r;
+    } catch (e) {
+      fill(out, h('span', { class: 'test-result bad' }, icon('alert-circle'), ` ${e.message}`));
+      return null;
+    }
+  };
+  if (fb?.configured) {
+    return h(
+      'section',
+      { class: 'card stack' },
+      h('h2', null, icon('check-decagram', 'ok-icon'), ' Instant notifications are on (Firebase)'),
+      h('p', { class: 'muted' }, `Project ${fb.projectId} · ${fb.clientEmail}. Android phones with the new app version get notifications in their notification bar straight away — even when the app is closed.`),
+      h(
+        'div',
+        { class: 'btn-row' },
+        h('button', { type: 'button', class: 'btn btn-soft', onclick: () => run(() => api.post('/push/firebase/test'), 'Checking with Google…') }, icon('connection'), 'Test the key'),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-ghost danger',
+            onclick: async () => {
+              if (!confirm('Remove the Firebase key? Phones will fall back to the 15-minute check.')) return;
+              if (await run(() => api.del('/push/firebase'), 'Removing…')) reload();
+            },
+          },
+          icon('trash-can-outline'),
+          'Remove key',
+        ),
+        out,
+      ),
+    );
+  }
+  const file = h('input', { type: 'file', accept: '.json,application/json', class: 'input' });
+  const text = h('textarea', { class: 'input mono', rows: 4, placeholder: '…or paste the whole contents of the .json key file here', spellcheck: 'false', autocomplete: 'off' });
+  file.addEventListener('change', async () => {
+    const f = file.files?.[0];
+    if (f) text.value = await f.text();
+  });
+  const save = h('button', { type: 'button', class: 'btn btn-primary' }, icon('content-save-outline'), 'Save key');
+  save.addEventListener('click', async () => {
+    if (!text.value.trim()) return toast('Choose the key file first', 'error');
+    save.disabled = true;
+    const r = await run(() => api.put('/push/firebase', { key: text.value.trim() }), 'Checking the key with Google…');
+    save.disabled = false;
+    if (r) {
+      text.value = '';
+      toast('Firebase connected — notifications now go straight to phones.');
+      reload();
+    }
+  });
+  return h(
+    'section',
+    { class: 'card stack callout-warn' },
+    h('h2', null, icon('bell-alert-outline'), ' Make notifications appear in the phone’s notification bar (one-time setup)'),
+    h('p', { class: 'muted' }, 'Right now phones only pick up notifications when the app is opened or about every 15 minutes. Connect Firebase (free) so they arrive instantly, like WhatsApp — even when the app is closed.'),
+    h(
+      'ol',
+      { class: 'steps' },
+      h('li', null, 'Open ', h('a', { href: 'https://console.firebase.google.com', target: '_blank', rel: 'noopener' }, 'console.firebase.google.com'), ' and create a project (e.g. “Rosier App”). Google Analytics can be off.'),
+      h('li', null, 'Click the Android icon to add an app. Package name: ', h('code', null, 'com.rosierfoods.app'), '. Download ', h('code', null, 'google-services.json'), '.'),
+      h('li', null, 'In GitHub → your app repo → Settings → Secrets and variables → Actions, add a secret named ', h('code', null, 'GOOGLE_SERVICES_JSON'), ' and paste the whole file in it. Then build the app again and install it.'),
+      h('li', null, 'Back in Firebase: ⚙ Project settings → Service accounts → “Generate new private key”. Upload that file here and press Save. It’s stored on the server and never shown again.'),
+    ),
+    h('label', { class: 'field' }, h('span', { class: 'field-label' }, 'Service-account key (.json)'), file),
+    text,
+    h('div', { class: 'btn-row' }, save, out),
+  );
 }
 
 /* ═════════ Products in the app ═════════ */

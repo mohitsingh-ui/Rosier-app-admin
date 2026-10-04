@@ -11,6 +11,7 @@
 import crypto from 'node:crypto';
 import { query } from './db.js';
 import * as shopify from './shopify.js';
+import * as fcm from './fcm.js';
 
 const EXPO_URL = process.env.EXPO_PUSH_URL || 'https://exp.host/--/api/v2/push/send';
 const RECEIPTS_URL = process.env.EXPO_RECEIPTS_URL || EXPO_URL.replace(/\/send$/, '/getReceipts');
@@ -27,23 +28,29 @@ const clip = (s, n) => String(s ?? '').slice(0, n);
  * couldn't get one (no Firebase yet) register with only `deviceId` and get their
  * notifications through the background check instead.
  */
-export async function register({ token, deviceId, platform, customerId, email, phone, name, member }) {
+export async function register({ token, fcmToken, deviceId, platform, customerId, email, phone, name, member }) {
   const dev = clip(deviceId, 80);
   let t = clip(token, 300);
+  const f = String(fcmToken || '').trim();
   if (!isExpoToken(t)) {
-    if (!/^[\w-]{6,80}$/.test(dev)) throw Object.assign(new Error('Not a push token'), { status: 400 });
-    t = `device:${dev}`;
-  } else if (dev) {
-    // Real push works for this phone now: retire its fallback row.
-    await query('update push_devices set enabled = false where token = $1', [`device:${dev}`]);
+    if (/^[\w:-]{20,400}$/.test(f)) t = `fcm:${f}`; // Android Firebase token — we send to it directly
+    else {
+      if (!/^[\w-]{6,80}$/.test(dev)) throw Object.assign(new Error('Not a push token'), { status: 400 });
+      t = `device:${dev}`;
+    }
+  }
+  if (dev && !t.startsWith('device:')) {
+    // Real push works for this phone now: retire its other rows (fallback / old tokens).
+    await query('update push_devices set enabled = false where device_id = $1 and token <> $2', [dev, t]);
   }
   await query(
     `insert into push_devices (token, device_id, platform, customer_id, email, phone, name, member, enabled, last_seen)
      values ($1, $2, $3, $4, $5, $6, $7, $8, true, now())
-     on conflict (token) do update set device_id = $2, platform = $3, customer_id = $4, email = $5, phone = $6, name = $7, member = $8, enabled = true, last_seen = now()`,
+     on conflict (token) do update set device_id = $2, platform = $3, customer_id = $4, email = $5, phone = $6, name = $7, member = $8, enabled = true, last_seen = now(),
+       push_ok = case when push_devices.token like 'fcm:%' then push_devices.push_ok else null end`,
     [t, dev, clip(platform, 20), tail(customerId), clip(email, 200) || null, clip(phone, 40) || null, clip(name, 80) || null, !!member],
   );
-  return { ok: true, mode: t.startsWith('device:') ? 'background' : 'push' };
+  return { ok: true, mode: t.startsWith('device:') ? 'background' : t.startsWith('fcm:') && !(await fcm.configured()) ? 'waiting' : 'push' };
 }
 
 export async function unregister(token) {
@@ -58,6 +65,7 @@ export async function stats() {
             count(*) filter (where enabled and platform = 'android')::int as android,
             count(*) filter (where enabled and platform = 'ios')::int as ios,
             count(*) filter (where enabled and (token like 'device:%' or push_ok = false))::int as background,
+            count(*) filter (where enabled and token like 'fcm:%')::int as fcm,
             count(*) filter (where enabled and push_ok)::int as push_ok
        from push_devices`,
   );
@@ -98,11 +106,33 @@ export async function sendTo(targets, { title, body, data = {}, sound = 'default
   let sent = 0;
   let failed = 0;
   const viaPush = [];
+  const viaFcm = [];
+  const fcmOn = await fcm.configured();
   for (const x of list) {
-    if (!isExpoToken(x.token) || x.push_ok === false) {
+    if (x.token.startsWith('fcm:') && fcmOn) viaFcm.push(x);
+    else if (!isExpoToken(x.token) || x.push_ok === false) {
       await outbox(x.device_id, title, body, data);
       sent++;
     } else viaPush.push(x);
+  }
+  // Android phones straight through Firebase (a few at a time).
+  for (let i = 0; i < viaFcm.length; i += 20) {
+    const batch = viaFcm.slice(i, i + 20);
+    const results = await Promise.all(batch.map((x) => fcm.send(x.token.slice(4), { title, body, data, sound })));
+    for (let k = 0; k < batch.length; k++) {
+      const x = batch[k];
+      if (results[k] === 'ok') {
+        sent++;
+        if (x.push_ok !== true) await query('update push_devices set push_ok = true where token = $1', [x.token]);
+      } else if (results[k] === 'gone') {
+        failed++;
+        await unregister(x.token);
+      } else {
+        await query('update push_devices set push_ok = false where token = $1', [x.token]);
+        await outbox(x.device_id, title, body, data);
+        sent++;
+      }
+    }
   }
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate' };
   if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;

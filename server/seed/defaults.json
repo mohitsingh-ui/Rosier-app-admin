@@ -58,7 +58,17 @@
           "#FF9F43",
           "#F368E0",
           "#FECA57"
-        ]
+        ],
+        "artHeight": 52,
+        "artScale": 1,
+        "videoWidth": 62,
+        "videoRatio": 1.78,
+        "videoRadius": 28,
+        "videoFit": "cover",
+        "titleSize": 34,
+        "titleColor": "",
+        "subSize": 15,
+        "subColor": ""
       },
       {
         "id": "bilona",
@@ -96,7 +106,17 @@
           "#E1A140",
           "#FF6B6B",
           "#48DBFB"
-        ]
+        ],
+        "artHeight": 52,
+        "artScale": 1,
+        "videoWidth": 62,
+        "videoRatio": 1.78,
+        "videoRadius": 28,
+        "videoFit": "cover",
+        "titleSize": 34,
+        "titleColor": "",
+        "subSize": 15,
+        "subColor": ""
       },
       {
         "id": "coins",
@@ -117,7 +137,17 @@
           "#F9CA24",
           "#6AB04C",
           "#E056FD"
-        ]
+        ],
+        "artHeight": 52,
+        "artScale": 1,
+        "videoWidth": 62,
+        "videoRatio": 1.78,
+        "videoRadius": 28,
+        "videoFit": "cover",
+        "titleSize": 34,
+        "titleColor": "",
+        "subSize": 15,
+        "subColor": ""
       }
     ],
     "vibrant": true
@@ -313,6 +343,22 @@
         "endAt": ""
       },
       {
+        "id": "hampers",
+        "enabled": true,
+        "kind": "text",
+        "label": "Gift\nHampers",
+        "font": "bold",
+        "textColor": "#8E1F2F",
+        "bgColor": "#FFF4E0",
+        "borderColor": "#E9C46A",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "app:/page/hampers",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
         "id": "breakfast",
         "enabled": true,
         "kind": "text",
@@ -387,7 +433,11 @@
         "icon": "ghee",
         "image": "",
         "blurb": "Bilona churned from curd",
-        "tint": "#F4E1C4"
+        "tint": "#F4E1C4",
+        "collection": "ghee",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "atta",
@@ -396,7 +446,11 @@
         "icon": "atta",
         "image": "",
         "blurb": "Stone ground, fibre intact",
-        "tint": "#E9E4C9"
+        "tint": "#E9E4C9",
+        "collection": "atta",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "oils",
@@ -405,7 +459,11 @@
         "icon": "oil",
         "image": "",
         "blurb": "Stone pressed, never heated",
-        "tint": "#F6E6B8"
+        "tint": "#F6E6B8",
+        "collection": "stone-press-oil",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "breakfast",
@@ -414,7 +472,11 @@
         "icon": "breakfast",
         "image": "",
         "blurb": "High protein mornings",
-        "tint": "#F6D9C7"
+        "tint": "#F6D9C7",
+        "collection": "oats",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "immunity",
@@ -423,7 +485,11 @@
         "icon": "immunity",
         "image": "",
         "blurb": "Honey & Amlaprash",
-        "tint": "#F3D6CC"
+        "tint": "#F3D6CC",
+        "collection": "immunity-booster",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "pickles",
@@ -432,7 +498,11 @@
         "icon": "pickle",
         "image": "",
         "blurb": "Sun dried like Dadi’s",
-        "tint": "#DCEBD0"
+        "tint": "#DCEBD0",
+        "collection": "pickles",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       },
       {
         "id": "combos",
@@ -441,7 +511,11 @@
         "icon": "combo",
         "image": "",
         "blurb": "Buy more, save more",
-        "tint": "#EADCF0"
+        "tint": "#EADCF0",
+        "collection": "combo",
+        "showBanner": true,
+        "bannerImage": "",
+        "bannerRadius": 16
       }
     ]
   },
@@ -893,7 +967,8 @@
       "gold": "#D9A441",
       "price": "#9B2C1F",
       "green": "#2F8A3E",
-      "tabBar": "#E9D4BA"
+      "tabBar": "#E9D4BA",
+      "imageBg": ""
     },
     "dark": {
       "bg": "#1B1714",
@@ -911,7 +986,8 @@
       "gold": "#E2B254",
       "price": "#F08A6F",
       "green": "#4CAF50",
-      "tabBar": "#2A221D"
+      "tabBar": "#2A221D",
+      "imageBg": ""
     },
     "layout": {
       "heroCardHeight": 212,
@@ -926,7 +1002,11 @@
       "productImageRatio": 0.9,
       "cardRadius": 20,
       "imageBannerRadius": 18,
-      "sectionSpacing": 1
+      "sectionSpacing": 1,
+      "gridColumns": 2,
+      "listImageScale": 92,
+      "listImageFit": "contain",
+      "dealImageScale": 100
     }
   },
   "effects": {
@@ -1154,6 +1234,36 @@
         "unlockedText": "Yay! You’ve unlocked a FREE {gift} 🎉",
         "startAt": "",
         "endAt": ""
+      }
+    ]
+  },
+  "productPage": {
+    "heroHeight": 58,
+    "heroFit": "contain",
+    "heroBg": "#F7EFE6",
+    "showAplus": true,
+    "aplusGap": 6,
+    "aplusRadius": 0,
+    "aplusMargin": 0,
+    "showTabs": true,
+    "tabsTitle": "",
+    "showReviews": true,
+    "reviewsTitle": "Product Reviews",
+    "reviewsPerPage": 5,
+    "allowWrite": true,
+    "writeButton": "Write a review",
+    "thanks": "Thank you! Your review will show once it’s approved.",
+    "starColor": "#E1A140"
+  },
+  "webPages": {
+    "items": [
+      {
+        "id": "hampers",
+        "enabled": true,
+        "handle": "hampers",
+        "title": "Gift Hampers",
+        "hideSiteChrome": true,
+        "extraCss": ""
       }
     ]
   }

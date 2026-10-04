@@ -14,8 +14,10 @@ import { listProducts } from './products.js';
 import { SCHEMA, SECTION_KEYS } from './schema.js';
 import * as shopify from './shopify.js';
 import * as push from './push.js';
+import * as fcm from './fcm.js';
 import * as analytics from './analytics.js';
 import * as catalog from './catalog.js';
+import * as website from './website.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
@@ -130,6 +132,11 @@ async function storeProxy(res, path, type) {
 }
 app.get('/api/store/products.json', wrap((req, res) => storeProxy(res, `/products.json?limit=${Math.min(250, Number(req.query.limit) || 250)}`, 'json')));
 app.get('/api/store/app-products', wrap(async (_req, res) => res.json(await catalog.publicList())));
+// Website content shown in the app (A+ banners, tabs, reviews, category banners).
+app.get('/api/store/product-extras/:handle', wrap(async (req, res) => (res.set('Cache-Control', 'public, max-age=600'), res.json(await website.productExtras(req.params.handle)))));
+app.get('/api/store/reviews/:productId', wrap(async (req, res) => (res.set('Cache-Control', 'public, max-age=300'), res.json(await website.reviews(req.params.productId, req.query.page, req.query.per)))));
+app.get('/api/store/collection-banner/:handle', wrap(async (req, res) => (res.set('Cache-Control', 'public, max-age=900'), res.json(await website.collectionBanner(req.params.handle)))));
+app.get('/api/store/product-json/:handle', wrap(async (req, res) => res.json(await website.productJson(req.params.handle))));
 app.get('/api/store/home', wrap((_req, res) => storeProxy(res, '/', 'html')));
 
 /* The app itself (web build) for the admin panel's live phone preview. */
@@ -143,6 +150,7 @@ const previewCsp = [
   "media-src * data: blob:",
   "connect-src 'self' https:",
   "frame-ancestors 'self'",
+  'frame-src https:',
 ].join('; ');
 app.use(
   '/preview-app',
@@ -247,6 +255,13 @@ app.post(
     const { lines, code } = req.body || {};
     res.json(await shopify.checkCoupon({ lines, code }));
   }),
+);
+
+// Write a review (goes to Judge.me, same as the website form; shows after approval).
+app.post(
+  '/api/store/reviews',
+  limit(6, 30 * 60 * 1000),
+  wrap(async (req, res) => res.json(await website.submitReview(req.body || {}))),
 );
 
 // Guest order tracking: order number + the email or phone used.
@@ -395,7 +410,10 @@ admin.post(
     res.json({ message: bad.length ? `Partly on. Not allowed: ${bad.map((b) => b.topic).join(', ')} (${bad[0].note})` : 'Instant order updates are on.', results: r });
   }),
 );
-admin.get('/push', wrap(async (_req, res) => res.json({ stats: await push.stats(), history: await push.history(), sounds: push.SOUNDS })));
+admin.get('/push', wrap(async (_req, res) => res.json({ stats: await push.stats(), history: await push.history(), sounds: push.SOUNDS, firebase: await fcm.adminView() })));
+admin.put('/push/firebase', wrap(async (req, res) => res.json(await fcm.saveKey(req.body?.key, req.admin.email))));
+admin.delete('/push/firebase', wrap(async (_req, res) => (await fcm.removeKey(), res.json({ ok: true }))));
+admin.post('/push/firebase/test', wrap(async (_req, res) => res.json(await fcm.test())));
 admin.post(
   '/push/send',
   wrap(async (req, res) => {

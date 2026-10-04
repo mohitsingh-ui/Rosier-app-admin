@@ -122,6 +122,9 @@ const ROUTE_SECTION = {
   '/coupons': 'coupons',
   '/track': 'tracking',
   '/orders': 'tracking',
+  '/product': 'productPage',
+  '/page': 'webPages',
+  '/collection': 'categories',
 };
 
 function partsFor(id) {
@@ -131,7 +134,7 @@ function partsFor(id) {
 
   if (id.startsWith('page:')) {
     const route = id.slice(5).replace(/\/$/, '') || '/';
-    const key = ROUTE_SECTION[route];
+    const key = ROUTE_SECTION[route] ?? ROUTE_SECTION['/' + route.split('/')[1]];
     const parts = [];
     if (key) parts.push({ key, path: [], title: sectionDef(key)?.title || key, fields: fieldsAt(key, []) });
     parts.push(themeColours());
@@ -170,7 +173,19 @@ function partsFor(id) {
   // A whole section, e.g. the coupon box in the cart.
   if (sectionDef(id)) return { title: sectionDef(id).title, parts: [{ key: id, path: [], title: sectionDef(id).title, fields: fieldsAt(id, []) }] };
   if (id === 'theme.cards')
-    return { title: 'Product cards', parts: [layout(['dealCardWidth', 'productImageRatio', 'cardRadius'], 'Size (all cards)'), themeColours(['cardStrong', 'card', 'border', 'text', 'price', 'green', 'primary'])] };
+    return { title: 'Product cards', parts: [layout(['gridColumns', 'productImageRatio', 'listImageScale', 'listImageFit', 'dealCardWidth', 'dealImageScale', 'cardRadius'], 'Size (all cards)'), themeColours(['imageBg', 'cardStrong', 'card', 'border', 'text', 'price', 'green', 'primary'])] };
+  if ((m = id.match(/^onboarding\.slides\.(\d+)\.(video|art)$/))) {
+    const keys = m[2] === 'video' ? ['videoWidth', 'videoRatio', 'videoRadius', 'videoFit', 'videoSound'] : ['artHeight', 'artScale', 'art'];
+    return {
+      title: m[2] === 'video' ? 'Intro video size' : 'Intro picture area',
+      parts: [
+        { key: 'onboarding', path: ['slides', Number(m[1])], title: 'Size', fields: pick(fieldsAt('onboarding', ['slides', 0]), keys) },
+        { key: 'onboarding', path: ['slides', Number(m[1])], title: 'Text size & colour', fields: pick(fieldsAt('onboarding', ['slides', 0]), ['titleSize', 'titleColor', 'subSize', 'subColor']) },
+      ],
+    };
+  }
+  if ((m = id.match(/^categories\.banner\.(\d+)$/)))
+    return { title: 'Category banner', parts: [{ key: 'categories', path: ['items', Number(m[1])], title: 'This category', fields: pick(fieldsAt('categories', ['items', 0]), ['showBanner', 'collection', 'bannerImage', 'bannerLink', 'bannerRadius']) }] };
   if ((m = id.match(/^onboarding\.slides\.(\d+)$/)))
     return {
       title: 'Intro slide',

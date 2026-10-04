@@ -16,6 +16,9 @@ const SCREENS = [
   ['/benefits-club', 'Benefits Club'],
   ['/blog', 'Blog'],
   ['/gifting', 'Gifting'],
+  ['/page/hampers', 'Gift Hampers (website page)'],
+  ['/product/a2-desi-cow-ghee-hand-churned-from-curd', 'A product page'],
+  ['/collection/ghee', 'A category page'],
   ['/about', 'Our Story'],
   ['/help', 'Help & Support'],
   ['/notifications', 'Notifications'],
@@ -47,6 +50,8 @@ const ROUTE_FOR = {
   rewards: '/cart',
   push: '/home',
   tracking: '/track',
+  productPage: '/product/a2-desi-cow-ghee-hand-churned-from-curd',
+  webPages: '/page/hampers',
   general: '/home',
 };
 
