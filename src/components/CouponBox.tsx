@@ -129,7 +129,7 @@ export function CouponBox({ check, subtotal }: { check: CouponCheck | null; subt
               autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={() => doApply(text)}
-              style={{ flex: 1, height: 46, borderRadius: 14, borderWidth: 1.2, borderColor: t.border, backgroundColor: t.bg, paddingHorizontal: 14, fontFamily: fonts.sansMedium, fontSize: 14, color: t.text, letterSpacing: 0.6 }}
+              style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 14, borderWidth: 1.2, borderColor: t.border, backgroundColor: t.bg, paddingHorizontal: 14, fontFamily: fonts.sansMedium, fontSize: 14, color: t.text, letterSpacing: 0.6 }}
             />
             <Pressable
               onPress={() => doApply(text)}

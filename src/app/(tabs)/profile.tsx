@@ -11,8 +11,9 @@ import { CountUp, PressableScale, Txt } from '../../components/ui';
 import { openStorePage } from '../../lib/cart';
 import { tap } from '../../lib/haptics';
 import { isLive, useContent } from '../../config/remote';
+import { useMembership } from '../../lib/membership';
 import { useApp } from '../../store/app';
-import { logout as shopifyLogout, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
+import { signOut, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
 
@@ -91,6 +92,7 @@ export default function Profile() {
   const customer = useAuth((s) => s.customer);
   const acc = useContent('account');
   const track = useContent('tracking');
+  const member = useMembership();
   const coupons = useContent('coupons');
   const orderCount = loggedIn && customer ? customer.orders.length : orders;
 
@@ -100,7 +102,7 @@ export default function Profile() {
     ...(coupons.enabled && coupons.showList ? [{ icon: 'ticket-percent-outline' as const, label: coupons.listTitle || 'Coupons', sub: 'Offers you can use', go: () => router.push('/coupons') }] : []),
     { icon: 'heart-outline', label: 'Wishlist', sub: `${wish} saved`, go: () => router.push('/wishlist') },
     { icon: 'history', label: 'Coin History', sub: 'Every coin, in and out', go: () => router.push('/coin-history') },
-    { icon: 'crown-outline', label: 'Benefits Club', sub: 'Member perks & free shipping', go: () => router.push('/benefits-club') },
+    { icon: 'crown-outline', label: 'Benefits Club', sub: member.active ? `Member${member.daysLeft != null ? ` · ${member.daysLeft} days left` : ''}` : 'Member perks & free shipping', go: () => router.push('/benefits-club') },
     { icon: 'gift-outline', label: 'Gifting', sub: 'Hampers & combos', go: () => router.push('/gifting') },
     { icon: 'bell-outline', label: 'Notifications', go: () => router.push('/notifications') },
     { icon: 'sprout-outline', label: 'Our Story', go: () => router.push('/about') },
@@ -167,6 +169,12 @@ export default function Profile() {
           <Text style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 12.5, color: t.green }} numberOfLines={1}>
             Logged in as {customer.email || customer.name}
           </Text>
+          {member.active && (
+            <Pressable onPress={() => router.push('/benefits-club')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#3E2415', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+              <MaterialCommunityIcons name="crown" size={12} color="#E8C27A" />
+              <Text style={{ fontFamily: fonts.sansSemi, fontSize: 10.5, color: '#E8C27A' }}>MEMBER</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -204,7 +212,7 @@ export default function Profile() {
 
       <PressableScale
         onPress={() => {
-          shopifyLogout();
+          signOut();
           logout();
           router.replace('/onboarding');
         }}

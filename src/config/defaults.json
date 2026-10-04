@@ -272,6 +272,91 @@
         "type": "pillars",
         "enabled": true
       }
+    ],
+    "quickTabsShow": true,
+    "quickTabWidth": 82,
+    "quickTabHeight": 54,
+    "quickTabs": [
+      {
+        "id": "rosier",
+        "enabled": true,
+        "kind": "logo",
+        "label": "ROSIER",
+        "font": "serif",
+        "textColor": "",
+        "bgColor": "",
+        "borderColor": "",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "breakfast",
+        "enabled": true,
+        "kind": "text",
+        "label": "Breakfast\nclub",
+        "font": "bold",
+        "textColor": "#D6338A",
+        "bgColor": "",
+        "borderColor": "",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "app:/collection/breakfast",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "club",
+        "enabled": true,
+        "kind": "text",
+        "label": "Benefit\nclub",
+        "font": "serif",
+        "textColor": "",
+        "bgColor": "",
+        "borderColor": "",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "app:/benefits-club",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "now",
+        "enabled": true,
+        "kind": "text",
+        "label": "Rosier\nNow",
+        "font": "serif",
+        "textColor": "",
+        "bgColor": "",
+        "borderColor": "",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "app:/collection/new",
+        "startAt": "",
+        "endAt": ""
+      },
+      {
+        "id": "coins",
+        "enabled": true,
+        "kind": "text",
+        "label": "Rosier\nCoins",
+        "font": "serif",
+        "textColor": "",
+        "bgColor": "",
+        "borderColor": "",
+        "icon": "",
+        "iconColor": "",
+        "image": "",
+        "link": "app:/coins",
+        "startAt": "",
+        "endAt": ""
+      }
     ]
   },
   "categories": {
@@ -433,7 +518,7 @@
     "bannerPerks": [
       {
         "icon": "percent-circle-outline",
-        "label": "15%\nOff"
+        "label": "17%\nOff"
       },
       {
         "icon": "truck-fast-outline",
@@ -441,11 +526,11 @@
       },
       {
         "icon": "cake-variant-outline",
-        "label": "Birthday\nSurprise"
+        "label": "Birthday\nBox"
       },
       {
-        "icon": "star-circle-outline",
-        "label": "Exclusive\nRewards"
+        "icon": "bottle-tonic-outline",
+        "label": "Free 1L\nGhee"
       },
       {
         "icon": "clock-fast",
@@ -458,23 +543,23 @@
     "perks": [
       {
         "icon": "percent-circle-outline",
-        "title": "15% off",
-        "body": "Member pricing across the store"
+        "title": "Flat 17% off on all orders",
+        "body": "Your member price, every single time"
       },
       {
-        "icon": "truck-fast-outline",
-        "title": "Free shipping",
-        "body": "On every single order"
+        "icon": "bottle-tonic-outline",
+        "title": "Free 1 Ltr ghee",
+        "body": "When your orders add up to ₹15,000"
       },
       {
         "icon": "cake-variant-outline",
-        "title": "Birthday surprise",
-        "body": "A little something from our kitchen"
+        "title": "Birthday surprise box",
+        "body": "Something special from our kitchen to yours"
       },
       {
-        "icon": "star-circle-outline",
-        "title": "Exclusive rewards",
-        "body": "Member-only drops and offers"
+        "icon": "truck-fast-outline",
+        "title": "Free & fast shipping",
+        "body": "On every order, no minimum"
       },
       {
         "icon": "clock-fast",
@@ -484,7 +569,39 @@
     ],
     "plansTitle": "Choose your plan",
     "popularPlanMonths": 6,
-    "membershipHandle": "membership"
+    "membershipHandle": "membership",
+    "loginPrompt": "Already a member? Log in to see your benefits",
+    "memberTitle": "Welcome to the Parivaar",
+    "memberSubtitle": "Your membership is active. Here's everything that's yours.",
+    "memberTags": [
+      "member",
+      "membership",
+      "rosiervip",
+      "rosier member",
+      "vip"
+    ],
+    "membershipProductId": "9360060547302",
+    "memberDiscountPercent": 17,
+    "cartMemberDiscount": true,
+    "gheeTarget": 15000,
+    "gheeTitle": "Free 1 Ltr ghee",
+    "renewDays": 15,
+    "updatesTitle": "Member updates",
+    "updates": [
+      {
+        "id": "welcome",
+        "enabled": true,
+        "pinned": true,
+        "title": "You're in! 🎉",
+        "body": "17% off is on for every order you place in the app. Your birthday box is on us — we'll reach out a few days before.",
+        "image": "",
+        "link": "",
+        "date": "",
+        "startAt": "",
+        "endAt": "",
+        "push": false
+      }
+    ]
   },
   "coins": {
     "earnPerRupee": 0.05,
@@ -962,5 +1079,40 @@
       "out": "Out for delivery",
       "delivered": "Delivered"
     }
+  },
+  "push": {
+    "enabled": true,
+    "sound": "chime",
+    "askTitle": "Never miss an order update",
+    "askBody": "Turn on notifications to know when your order ships, arrives, and when we drop member-only offers.",
+    "askButton": "Turn on notifications",
+    "orders": {
+      "placed": {
+        "enabled": true,
+        "title": "Order {order} confirmed 🎉",
+        "body": "Thanks {name}! We’re packing it with love."
+      },
+      "shipped": {
+        "enabled": true,
+        "title": "Order {order} is on its way 🚚",
+        "body": "Shipped with {courier}. Tap to track it live."
+      },
+      "out": {
+        "enabled": true,
+        "title": "Arriving today 🛵",
+        "body": "Order {order} is out for delivery. Keep your phone handy!"
+      },
+      "delivered": {
+        "enabled": true,
+        "title": "Delivered ✅",
+        "body": "Order {order} has reached you. Enjoy, and tell us how you liked it!"
+      },
+      "cancelled": {
+        "enabled": true,
+        "title": "Order {order} cancelled",
+        "body": "Your order was cancelled. Any payment will be refunded to the original method."
+      }
+    },
+    "liveCard": true
   }
 }

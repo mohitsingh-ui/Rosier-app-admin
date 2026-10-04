@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -6,6 +6,7 @@ import { Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View }
 import Animated, { FadeIn, FadeInDown, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
+import { LiveOrderCard, PushAsk } from '../../components/HomeLive';
 import { LiveBannerSlide, LiveTiles } from '../../components/LiveBanners';
 import type { LiveBanner } from '../../data/banners';
 import { RosierLogo, Tagline } from '../../components/Logo';
@@ -32,13 +33,6 @@ const GREET_H = 58;
 const GREET_GAP = 12;
 const SEARCH_H = 48;
 
-const TOP_TABS = [
-  { key: 'rosier', label: 'ROSIER' },
-  { key: 'breakfast', label: 'Breakfast\nclub' },
-  { key: 'club', label: 'Benefit\nclub' },
-  { key: 'now', label: 'Rosier\nNow' },
-  { key: 'coins', label: 'Rosier\nCoins' },
-];
 
 export default function Home() {
   const t = useTheme();
@@ -51,7 +45,7 @@ export default function Home() {
   const unread = useApp((s) => s.notifications.filter((n) => !n.read).length);
   const openMenu = useApp((s) => s.setMenuOpen);
   const balance = useCoins((s) => s.balance);
-  const [tab, setTab] = useState('rosier');
+  const [tab, setTab] = useState<string | null>(null);
   const liveSlides = useBanners((s) => s.slides);
   const bannerAspect = useBanners((s) => s.aspect);
   const refreshBanners = useBanners((s) => s.refresh);
@@ -110,13 +104,10 @@ export default function Home() {
   // Image banners keep their shape (or the ratio set in Theme); colour cards use the card height from Theme.
   const slideH = hasImageSlides ? Math.round(slideW / (L.heroImageRatio > 0 ? L.heroImageRatio : bannerAspect)) : L.heroCardHeight;
 
-  const onTopTab = (k: string) => {
-    setTab(k);
-    if (k === 'breakfast') router.push({ pathname: '/collection/[id]', params: { id: 'breakfast' } });
-    if (k === 'club') router.push('/benefits-club');
-    if (k === 'now') router.push({ pathname: '/collection/[id]', params: { id: 'new' } });
-    if (k === 'coins') router.navigate('/coins');
-    setTimeout(() => setTab('rosier'), 600);
+  const onTopTab = (id: string, link: string) => {
+    setTab(id);
+    openLink(link);
+    setTimeout(() => setTab(null), 600);
   };
 
   return (
@@ -193,28 +184,54 @@ export default function Home() {
           />
         }
       >
-        {/* Sub-brand tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6, paddingTop: 4 }}>
-          {TOP_TABS.map((tb, i) => {
-            const active = tab === tb.key;
-            return (
-              <Animated.View key={tb.key} entering={FadeInDown.delay(i * 60)}>
-                <PressableScale
-                  onPress={() => onTopTab(tb.key)}
-                  style={{ width: 82, height: 54, borderRadius: 10, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, backgroundColor: active ? t.card : t.cardStrong, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  {tb.key === 'rosier' ? (
-                    <RosierLogo width={70} color={t.mode === 'dark' ? '#E8C27A' : '#3E2415'} />
-                  ) : tb.key === 'breakfast' ? (
-                    <Text style={{ fontFamily: fonts.sansBold, fontSize: 12, color: '#D6338A', textAlign: 'center', lineHeight: 13 }}>{tb.label}</Text>
-                  ) : (
-                    <Text style={{ fontFamily: fonts.serifRegular, fontSize: 13.5, color: t.text, textAlign: 'center', lineHeight: 16 }}>{tb.label}</Text>
-                  )}
-                </PressableScale>
-              </Animated.View>
-            );
-          })}
-        </ScrollView>
+        {/* Sub-brand tabs (admin panel → Home screen → Tabs above the banner) */}
+        {home.quickTabsShow !== false && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6, paddingTop: 4 }}>
+            {(home.quickTabs ?? []).map((tb, i) => {
+              if (!tb || (!isLive(tb) && !inEditor)) return null;
+              const hidden = !isLive(tb);
+              const active = tab === tb.id;
+              const w = Math.min(200, Math.max(50, Number(home.quickTabWidth) || 82));
+              const h = Math.min(120, Math.max(36, Number(home.quickTabHeight) || 54));
+              const fg = tb.textColor || (tb.kind === 'logo' ? (t.mode === 'dark' ? '#E8C27A' : '#3E2415') : t.text);
+              return (
+                <Editable key={tb.id || i} id={`home.quickTabs.${i}`} label={`Tab · ${String(tb.label || tb.kind).replace(/\n/g, ' ')}`}>
+                  <Animated.View entering={FadeInDown.delay(i * 60)} style={hidden ? { opacity: 0.35 } : undefined}>
+                    <PressableScale
+                      onPress={() => onTopTab(tb.id, tb.link)}
+                      style={{ width: w, height: h, borderRadius: 10, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, backgroundColor: tb.bgColor || (active ? t.card : t.cardStrong), borderWidth: 1, borderColor: tb.borderColor || t.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, overflow: 'hidden' }}
+                    >
+                      {tb.kind === 'logo' ? (
+                        <RosierLogo width={w - 12} color={fg} />
+                      ) : tb.kind === 'image' && tb.image ? (
+                        <Image source={{ uri: resolveImage(tb.image) }} style={{ width: w - 10, height: h - 10 }} contentFit="contain" />
+                      ) : (
+                        <>
+                          {!!tb.icon && <MaterialCommunityIcons name={tb.icon as any} size={18} color={tb.iconColor || fg} />}
+                          <Text
+                            numberOfLines={tb.icon ? 1 : 2}
+                            style={
+                              tb.font === 'bold'
+                                ? { fontFamily: fonts.sansBold, fontSize: 12, color: fg, textAlign: 'center', lineHeight: 13 }
+                                : tb.font === 'sans'
+                                  ? { fontFamily: fonts.sansMedium, fontSize: 12, color: fg, textAlign: 'center', lineHeight: 14 }
+                                  : { fontFamily: fonts.serifRegular, fontSize: 13.5, color: fg, textAlign: 'center', lineHeight: 16 }
+                            }
+                          >
+                            {tb.icon ? String(tb.label).replace(/\n/g, ' ') : tb.label}
+                          </Text>
+                        </>
+                      )}
+                    </PressableScale>
+                  </Animated.View>
+                </Editable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <LiveOrderCard />
+        <PushAsk />
 
         <Editable
           id="home.hero"

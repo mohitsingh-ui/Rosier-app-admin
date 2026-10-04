@@ -16,6 +16,10 @@ type AppState = {
   themePref: ThemePref;
   /** The customer turned off seasonal effects (snow, sparkles…) in Profile. */
   effectsOff: boolean;
+  /** Random id for this install (links app orders and pushes to this phone). */
+  deviceId: string;
+  /** We asked for notification permission (in-app card) — don't nag again. */
+  pushAsked: boolean;
   menuOpen: boolean;
   notifications: { id: string; title: string; body: string; time: number; read: boolean; link?: string }[];
   setOnboarded: (v: boolean) => void;
@@ -41,6 +45,8 @@ export const useApp = create<AppState>()(
       photo: null,
       themePref: 'light',
       effectsOff: false,
+      deviceId: '',
+      pushAsked: false,
       menuOpen: false,
       // The welcome message (editable in the admin panel) is added on first launch — see _layout.tsx.
       notifications: [],
@@ -66,6 +72,7 @@ export const useApp = create<AppState>()(
       storage,
       partialize: ({ hydrated, menuOpen, ...rest }) => rest,
       onRehydrateStorage: () => () => {
+        if (!useApp.getState().deviceId) useApp.setState({ deviceId: `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}` });
         useApp.setState({ hydrated: true });
       },
     },

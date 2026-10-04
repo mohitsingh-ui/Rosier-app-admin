@@ -13,6 +13,9 @@ import { success } from '../lib/haptics';
 import { useCart } from '../store/shop';
 import { useContent } from '../config/remote';
 import { fonts } from '../theme';
+import { MemberView } from '../components/MemberView';
+import { useMembership } from '../lib/membership';
+import { login, useLoggedIn, useShopifyFlags } from '../store/auth';
 
 const GOLD = '#E8C27A';
 
@@ -47,10 +50,34 @@ export default function BenefitsClub() {
   const [vid, setVid] = useState(membership?.variants[1]?.id ?? membership?.variants[0]?.id);
   const add = useCart((s) => s.add);
   const v = membership?.variants.find((x) => x.id === vid);
+  const m = useMembership();
+  const loggedIn = useLoggedIn();
+  const flags = useShopifyFlags();
+  const [plans, setPlans] = useState(false);
+  const showMember = m.active && !plans;
+  const doLogin = async () => {
+    try {
+      if (await login()) toast('You’re logged in', 'ok');
+    } catch (e: any) {
+      toast(e?.message || 'Login didn’t work. Please try again.', 'info');
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#140D08' }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 60, paddingHorizontal: 20, paddingBottom: 140 }}>
+        {showMember ? (
+          <MemberView m={m} onRenew={() => setPlans(true)} />
+        ) : (
+          <>
+        {m.expired && (
+          <View style={{ backgroundColor: 'rgba(243,165,123,0.12)', borderRadius: 14, padding: 12, marginBottom: 18, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <MaterialCommunityIcons name="calendar-alert" size={22} color="#F3A57B" />
+            <Text style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 13, color: '#F3D2BE' }}>
+              Your membership ended{m.until ? ` on ${new Date(m.until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}. Renew to get your benefits back.
+            </Text>
+          </View>
+        )}
         <Card title={b.bannerTitle} sub={b.bannerSubtitle} footer={b.cardFooter} />
         <Animated.Text entering={FadeInDown.delay(200)} style={{ fontFamily: fonts.serif, fontSize: 30, color: '#FBE6CF', textAlign: 'center', marginTop: 28 }}>
           {b.pageTitle}
@@ -96,17 +123,24 @@ export default function BenefitsClub() {
             </View>
           </>
         )}
+        {flags.loginEnabled && !loggedIn && (
+          <Pressable onPress={doLogin} style={{ marginTop: 22, alignItems: 'center', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(232,194,122,0.35)' }}>
+            <Text style={{ fontFamily: fonts.sansMedium, fontSize: 13.5, color: GOLD }}>{b.loginPrompt}</Text>
+          </Pressable>
+        )}
+          </>
+        )}
       </ScrollView>
 
       <Pressable onPress={() => router.back()} style={{ position: 'absolute', top: insets.top + 8, left: 16, width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>
         <MaterialCommunityIcons name="chevron-left" size={28} color={GOLD} />
       </Pressable>
 
-      {membership && v && (
+      {!showMember && membership && v && (
         <View style={{ position: 'absolute', left: 20, right: 20, bottom: insets.bottom + 16 }}>
           <Button
             kind="gold"
-            label={`Join for ${rupee(v.price)}`}
+            label={`${m.active || m.expired ? 'Renew' : 'Join'} for ${rupee(v.price)}`}
             icon="sparkles"
             onPress={() => {
               add(membership.handle, v.id);

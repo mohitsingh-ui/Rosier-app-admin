@@ -56,10 +56,13 @@ export type Customer = {
   phone: string;
   imageUrl: string;
   address: string;
+  /** Shopify customer tags (used to spot members). */
+  tags?: string[];
+  since?: string | null;
   orders: ShopOrder[];
 };
 
-type Tokens = { accessToken: string; refreshToken: string | null; expiresAt: number };
+type Tokens = { accessToken: string; refreshToken: string | null; expiresAt: number; idToken?: string | null };
 
 /* Tokens: secure storage on phones (web preview falls back to local storage). */
 const secure = createJSONStorage(() =>
@@ -115,7 +118,7 @@ export async function validToken(): Promise<string | null> {
   if (t.expiresAt - 60_000 > Date.now()) return t.accessToken;
   try {
     const next = await post<Tokens>('/api/auth/refresh', { refreshToken: t.refreshToken });
-    useTokens.setState({ tokens: { accessToken: next.accessToken, refreshToken: next.refreshToken ?? t.refreshToken, expiresAt: next.expiresAt } });
+    useTokens.setState({ tokens: { accessToken: next.accessToken, refreshToken: next.refreshToken ?? t.refreshToken, expiresAt: next.expiresAt, idToken: next.idToken ?? t.idToken ?? null } });
     return next.accessToken;
   } catch (e: any) {
     if (e?.status && e.status < 500) logout();
@@ -136,7 +139,7 @@ export async function login(): Promise<boolean> {
     return false;
   }
   const tokens = await post<Tokens>('/api/auth/ticket', { ticket });
-  useTokens.setState({ tokens: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, expiresAt: tokens.expiresAt } });
+  useTokens.setState({ tokens: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, expiresAt: tokens.expiresAt, idToken: tokens.idToken ?? null } });
   useAuth.setState({ loggedInAt: Date.now() });
   const c = await loadCustomer({ firstLogin: true });
   if (c) {
@@ -150,6 +153,26 @@ export async function login(): Promise<boolean> {
 export function logout() {
   useTokens.setState({ tokens: null });
   useAuth.setState({ customer: null, loggedInAt: 0 });
+}
+
+/**
+ * Logout button: forgets the login in the app AND signs them out of their Shopify
+ * account (the same account as rosierfoods.com), so the next login asks again.
+ */
+export async function signOut() {
+  const idToken = useTokens.getState().tokens?.idToken ?? null;
+  const hadLogin = hasTokens();
+  logout();
+  if (!hadLogin) return;
+  try {
+    const appRedirect = Linking.createURL('auth');
+    const { url } = await post<{ url: string | null }>('/api/auth/logout', { idToken, redirect: appRedirect });
+    if (!url) return;
+    if (Platform.OS === 'web') await WebBrowser.openBrowserAsync(url);
+    else await WebBrowser.openAuthSessionAsync(url, appRedirect);
+  } catch {
+    // Offline: they're still logged out of the app.
+  }
 }
 
 /**
@@ -204,7 +227,7 @@ export function creditNewOrders(): { order: ShopOrder; coins: number }[] {
 /** Shopify cart checkout with the customer logged in (falls back to guest). */
 export async function createCheckout(lines: { variantId: number; qty: number }[], discountCodes: string[] = []) {
   const token = await validToken();
-  const r = await post<{ checkoutUrl: string }>('/api/checkout', { lines, discountCodes }, token ? { 'X-Customer-Token': token } : {});
+  const r = await post<{ checkoutUrl: string }>('/api/checkout', { lines, discountCodes, deviceId: useApp.getState().deviceId }, token ? { 'X-Customer-Token': token } : {});
   return { url: r.checkoutUrl, loggedIn: !!token };
 }
 

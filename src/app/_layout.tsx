@@ -22,6 +22,8 @@ import { SeasonalEffects } from '../components/SeasonalEffects';
 import { getContent, useRemote } from '../config/remote';
 import { creditNewOrders, hasTokens, loadCustomer } from '../store/auth';
 import { reportRoute, startEditorBridge } from '../lib/editorBridge';
+import { startNotifications, startUsagePings, syncPush } from '../lib/push';
+import { useAuth } from '../store/auth';
 import { ToastHost } from '../components/Toast';
 import { useBanners } from '../data/banners';
 import { useCatalog } from '../data/catalog';
@@ -77,7 +79,14 @@ export default function RootLayout() {
   }, [loaded, hydrated]);
 
   useEffect(() => {
-    if (hydrated) startEditorBridge();
+    if (!hydrated) return;
+    startEditorBridge();
+    startNotifications();
+    startUsagePings();
+    // Keep the backend's phone ↔ customer link fresh (login, logout, membership).
+    return useAuth.subscribe((s, prev) => {
+      if (s.customer?.id !== prev.customer?.id || s.customer?.tags?.join() !== prev.customer?.tags?.join() || s.customer?.orders.length !== prev.customer?.orders.length) syncPush();
+    });
   }, [hydrated]);
 
   useEffect(() => {

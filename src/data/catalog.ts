@@ -90,10 +90,23 @@ export const useCatalog = create<CatalogState>()(
         try {
           const res = await fetch(storeFetchUrl('/products.json?limit=250'));
           const json = await res.json();
-          const raw: any[] = json.products ?? [];
+          let raw: any[] = json.products ?? [];
+          // Admin panel → Products in the app: extra Shopify products (not on the website) and hidden ones.
+          let rules: { mode: 'website' | 'pick'; show: string[]; hide: string[]; extra: any[] } | null = null;
+          try {
+            if (API_URL) rules = await (await fetch(`${API_URL}/api/store/app-products`)).json();
+          } catch {
+            rules = null;
+          }
+          const extraHandles = new Set<string>((rules?.extra ?? []).map((p: any) => p.handle));
+          if (rules?.extra?.length) raw = [...raw.filter((p) => !extraHandles.has(p.handle)), ...rules.extra];
           const byHandle = new Map(raw.map((p) => [p.handle, p]));
           const known = new Set<string>();
-          const merged: Product[] = get().products.map((p) => {
+          // Start from what we have plus the built-in list (so products hidden earlier can come back).
+          const current = get().products;
+          const have = new Set(current.map((p) => p.handle));
+          const base = [...current, ...snapshot.filter((p) => !have.has(p.handle))];
+          const merged: Product[] = base.map((p) => {
             known.add(p.handle);
             const r = byHandle.get(p.handle);
             if (!r) return p;
@@ -108,10 +121,14 @@ export const useCatalog = create<CatalogState>()(
           // Pick up brand-new launches automatically.
           const seenTitles = new Set(merged.map((p) => p.title.toLowerCase()));
           for (const r of raw) {
-            const cat = TYPE_TO_CAT[r.product_type];
-            if (!cat || known.has(r.handle) || DUPLICATE.test(r.handle)) continue;
-            if ((r.tags as string[]).some((t) => /no-recommend|nitro17/i.test(t))) continue;
-            if (seenTitles.has(String(r.title).toLowerCase())) continue;
+            const picked = extraHandles.has(r.handle);
+            const cat = TYPE_TO_CAT[r.product_type] ?? (picked ? 'other' : undefined);
+            if (!cat || known.has(r.handle)) continue;
+            if (!picked) {
+              if (DUPLICATE.test(r.handle)) continue;
+              if ((r.tags as string[]).some((t) => /no-recommend|nitro17/i.test(t))) continue;
+              if (seenTitles.has(String(r.title).toLowerCase())) continue;
+            }
             const variants = mapVariants(r);
             if (!variants.length) continue;
             const body = clean(r.body_html);
@@ -130,7 +147,15 @@ export const useCatalog = create<CatalogState>()(
               tags: [],
             });
           }
-          set({ products: merged, updatedAt: Date.now() });
+          let final = merged;
+          if (rules?.mode === 'pick') {
+            const keep = new Set([...(rules.show ?? []), getContent('benefits').membershipHandle || 'membership']);
+            final = merged.filter((p) => keep.has(p.handle));
+          } else if (rules?.hide?.length) {
+            const hide = new Set(rules.hide);
+            final = merged.filter((p) => !hide.has(p.handle));
+          }
+          set({ products: final, updatedAt: Date.now() });
         } catch {
           // Offline or blocked — keep the cached catalogue.
         } finally {
