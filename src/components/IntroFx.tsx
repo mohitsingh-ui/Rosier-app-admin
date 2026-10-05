@@ -6,12 +6,21 @@
  *  - WordReveal: the title pops in word by word.
  *  - GlowRing: a pulsing ring behind the next button.
  */
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { safeColor } from '../lib/color';
 import { StyleSheet, Text, TextStyle, View } from 'react-native';
 import Animated, {
   Easing,
+  BounceIn,
+  FadeIn,
+  FadeInDown,
+  FadeInLeft,
   FadeInUp,
+  FlipInXUp,
   interpolate,
+  LightSpeedInLeft,
+  RotateInDownLeft,
+  ZoomInRotate,
   interpolateColor,
   SharedValue,
   useAnimatedStyle,
@@ -36,7 +45,8 @@ const DEFAULTS: Palette[] = [
 export const paletteFor = (colors: string[] | undefined, i: number): Palette => {
   const d = DEFAULTS[i % DEFAULTS.length];
   const c = (colors ?? []).filter(Boolean);
-  return [c[0] || d[0], c[1] || d[1], c[2] || d[2], c[3] || d[3]];
+  // Bad colours (typos) would crash the colour animation on phones — fall back to the defaults.
+  return [safeColor(c[0], d[0]), safeColor(c[1], d[1]), safeColor(c[2], d[2]), safeColor(c[3], d[3])];
 };
 
 /** A soft glowing blob (radial gradient) that drifts; each slide has its own, faded in as you swipe to it. */
@@ -153,4 +163,111 @@ export function GlowRing({ color, size, last }: { color: string; size: number; l
   }, []);
   const a = useAnimatedStyle(() => ({ opacity: 0.55 * (1 - v.value), transform: [{ scaleX: 1 + v.value * (last ? 0.15 : 0.5) }, { scaleY: 1 + v.value * 0.5 }] }));
   return <Animated.View pointerEvents="none" entering={ZoomIn} style={[{ position: 'absolute', right: 0, width: size, height: 56, borderRadius: 28, backgroundColor: color }, a]} />;
+}
+
+
+/* ───────── Title animations (admin panel → slide → Title animation) ───────── */
+
+export const TEXT_FX = ['words', 'letters', 'typewriter', 'fade', 'slideUp', 'slideLeft', 'zoom', 'bounce', 'flip', 'swing', 'none'] as const;
+
+function enteringFor(fx: string, i: number) {
+  switch (fx) {
+    case 'letters':
+      return FadeInDown.delay(i * 28).springify().damping(12);
+    case 'slideLeft':
+      return FadeInLeft.delay(i * 70).springify().damping(14);
+    case 'zoom':
+      return ZoomIn.delay(i * 60).springify().damping(12);
+    case 'bounce':
+      return BounceIn.delay(i * 80);
+    case 'flip':
+      return FlipInXUp.delay(i * 80).duration(500);
+    case 'swing':
+      return RotateInDownLeft.delay(i * 70).duration(520);
+    case 'speed':
+      return LightSpeedInLeft.delay(i * 60);
+    case 'spin':
+      return ZoomInRotate.delay(i * 60);
+    default:
+      return FadeInUp.delay(i * 55).springify().damping(11);
+  }
+}
+
+function Typewriter({ text, style }: { text: string; style: TextStyle }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    setN(0);
+    const id = setInterval(() => setN((v) => (v >= text.length ? (clearInterval(id), v) : v + 1)), 45);
+    return () => clearInterval(id);
+  }, [text]);
+  return (
+    <Text style={style}>
+      {text.slice(0, n)}
+      <Text style={{ opacity: n < text.length ? 1 : 0 }}>|</Text>
+    </Text>
+  );
+}
+
+/** The slide title, animated the way the admin panel says each time its slide comes into view. */
+export function TextReveal({ text, style, active, fx = 'words' }: { text: string; style: TextStyle; active: boolean; fx?: string }) {
+  const t = String(text || '');
+  if (!active || fx === 'none') return <Text style={style}>{t}</Text>;
+  if (fx === 'typewriter') return <Typewriter text={t} style={style} />;
+  if (fx === 'fade') return <Animated.Text entering={FadeIn.duration(700)} style={style}>{t}</Animated.Text>;
+  if (fx === 'slideUp') return <Animated.Text entering={FadeInUp.springify().damping(13)} style={style}>{t}</Animated.Text>;
+  // Per word (or per letter for "letters").
+  const parts = fx === 'letters' ? [...t] : t.split(/(\s+)/);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      {parts.map((w, i) =>
+        /^\s+$/.test(w) ? (
+          <Text key={i} style={style}>
+            {' '}
+          </Text>
+        ) : (
+          <Animated.Text key={i} entering={enteringFor(fx, i)} style={style}>
+            {w}
+          </Animated.Text>
+        ),
+      )}
+    </View>
+  );
+}
+
+/* ───────── Looping motion for the slide picture (admin panel → Picture motion) ───────── */
+
+export const ART_MOTION = ['none', 'float', 'pulse', 'swing', 'spin', 'bounce', 'breathe', 'wobble'] as const;
+
+export function LoopMotion({ kind, children }: { kind?: string; children: React.ReactNode }) {
+  const v = useSharedValue(0);
+  const k = kind || 'none';
+  useEffect(() => {
+    if (k === 'none') return;
+    const dur = { float: 2600, pulse: 1100, swing: 2200, spin: 14000, bounce: 900, breathe: 3200, wobble: 1600 }[k] ?? 2000;
+    v.value = 0;
+    v.value = k === 'spin' ? withRepeat(withTiming(1, { duration: dur, easing: Easing.linear }), -1, false) : withRepeat(withTiming(1, { duration: dur, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [k]);
+  const a = useAnimatedStyle(() => {
+    const p = v.value;
+    switch (k) {
+      case 'float':
+        return { transform: [{ translateY: interpolate(p, [0, 1], [-10, 10]) }] };
+      case 'pulse':
+        return { transform: [{ scale: interpolate(p, [0, 1], [1, 1.07]) }] };
+      case 'swing':
+        return { transform: [{ rotate: `${interpolate(p, [0, 1], [-6, 6])}deg` }] };
+      case 'spin':
+        return { transform: [{ rotate: `${p * 360}deg` }] };
+      case 'bounce':
+        return { transform: [{ translateY: -Math.abs(Math.sin(p * Math.PI)) * 18 }] };
+      case 'breathe':
+        return { opacity: interpolate(p, [0, 1], [0.85, 1]), transform: [{ scale: interpolate(p, [0, 1], [0.96, 1.04]) }] };
+      case 'wobble':
+        return { transform: [{ translateX: interpolate(p, [0, 1], [-8, 8]) }, { rotate: `${interpolate(p, [0, 1], [-3, 3])}deg` }] };
+      default:
+        return {};
+    }
+  });
+  if (k === 'none') return <>{children}</>;
+  return <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, a]}>{children}</Animated.View>;
 }

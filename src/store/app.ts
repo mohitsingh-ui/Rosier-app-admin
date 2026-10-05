@@ -65,7 +65,8 @@ export const useApp = create<AppState>()(
           ].slice(0, 30),
         })),
       markAllRead: () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
-      logout: () => set({ onboarded: false, menuOpen: false }),
+      // Logging out keeps the intro as seen, so the app opens straight to Home as a guest.
+      logout: () => set({ menuOpen: false }),
     }),
     {
       name: 'rosier-app',

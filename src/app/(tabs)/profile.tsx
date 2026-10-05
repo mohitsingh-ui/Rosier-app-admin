@@ -15,6 +15,7 @@ import { useMembership } from '../../lib/membership';
 import { registerPush, usePushState } from '../../lib/push';
 import { Linking, Platform } from 'react-native';
 import { useApp } from '../../store/app';
+import { toast } from '../../components/Toast';
 import { signOut, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
@@ -249,9 +250,10 @@ export default function Profile() {
 
       <PressableScale
         onPress={() => {
-          signOut();
           logout();
-          router.replace('/onboarding');
+          signOut().catch(() => {});
+          router.replace('/home');
+          toast('You’re logged out', 'ok');
         }}
         style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: t.border }}
       >

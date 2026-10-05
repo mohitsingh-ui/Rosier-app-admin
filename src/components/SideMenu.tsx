@@ -87,9 +87,9 @@ export function MenuShell({ children }: { children: ReactNode }) {
               <Pressable
                 onPress={() =>
                   go(() => {
-                    signOut();
                     logout();
-                    router.replace('/onboarding');
+                    signOut().catch(() => {});
+                    router.replace('/home');
                   })
                 }
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 10, marginTop: 20 }}

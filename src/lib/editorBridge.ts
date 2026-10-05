@@ -54,6 +54,9 @@ export function startEditorBridge() {
       overlay?.select(msg.id ?? null);
     } else if (msg.type === 'rosier:tryEffect') {
       useTryEffect.setState((s) => ({ effect: msg.effect ?? null, n: s.n + 1 }));
+    } else if (msg.type === 'rosier:tryCartFx') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('./cartFx').cartAdded({ coins: 29, title: 'Gir Cow A2 Ghee' });
     } else if (msg.type === 'rosier:replay' && msg.id) {
       useReplay.setState((s) => ({ n: { ...s.n, [msg.id!]: (s.n[msg.id!] ?? 0) + 1 } }));
     }

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-reanimated';
+import { cartAdded } from '../lib/cartFx';
 import { coinsForAmount } from '../config/coins';
 import { defaultVariant } from '../data/catalog';
 import type { Product } from '../data/types';
@@ -44,8 +45,7 @@ export const DealCard = React.memo(function DealCard({ product, index = 0, width
             <PressableScale
               onPress={() => {
                 add(product.handle, v.id);
-                flyFrom(imgRef, product.images[0]);
-                success();
+                cartAdded({ ref: imgRef, image: product.images[0], coins: coinsForAmount(v.price), title: product.title });
               }}
               style={{ position: 'absolute', right: 0, bottom: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: t.deepAlt, alignItems: 'center', justifyContent: 'center' }}
             >
@@ -184,9 +184,7 @@ export const GridCard = React.memo(function GridCard({ product, index = 0, width
             <PressableScale
               onPress={() => {
                 add(product.handle, v.id);
-                flyFrom(imgRef, product.images[0]);
-                success();
-                toast(`Added to cart · earn ${coinsForAmount(v.price)} coins`, 'coin');
+                cartAdded({ ref: imgRef, image: product.images[0], coins: coinsForAmount(v.price), title: product.title });
               }}
               style={{ height: 36, borderRadius: 10, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' }}
             >

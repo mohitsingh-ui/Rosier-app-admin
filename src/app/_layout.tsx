@@ -25,6 +25,7 @@ import { reportRoute, startEditorBridge } from '../lib/editorBridge';
 import { startNotifications, startUsagePings, syncPush } from '../lib/push';
 import { useAuth } from '../store/auth';
 import { ToastHost } from '../components/Toast';
+import { CartFxHost } from '../components/CartFxHost';
 import { prefetchImages } from '../components/ui';
 import { Image as ExpoImage } from 'expo-image';
 import { useBanners } from '../data/banners';
@@ -32,8 +33,41 @@ import { useCatalog } from '../data/catalog';
 import { useApp } from '../store/app';
 import { useCoins } from '../store/shop';
 import { useTheme } from '../theme';
+import { startBootGuard } from '../lib/bootGuard';
+import { Pressable, Text } from 'react-native';
+import { router } from 'expo-router';
+
+/**
+ * If any screen hits an error, show a friendly "try again" screen instead of closing
+ * the app. "Go to Home" also marks the intro as seen so the app can always open.
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  console.warn('Screen error:', error?.message);
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FBEBD8', alignItems: 'center', justifyContent: 'center', padding: 30, gap: 14 }}>
+      <Text style={{ fontSize: 44 }}>🫙</Text>
+      <Text style={{ fontSize: 20, fontWeight: '600', color: '#3E2415', textAlign: 'center' }}>Oops, something went wrong</Text>
+      <Text style={{ fontSize: 14, color: '#7A6453', textAlign: 'center' }}>Don’t worry — your cart and coins are safe.</Text>
+      <Pressable
+        onPress={() => {
+          const wanted = Number(getContent('onboarding')?.reshowVersion) || 1;
+          useApp.setState({ onboarded: true, introVersion: wanted } as any);
+          retry().catch(() => {});
+          setTimeout(() => router.replace('/home'), 50);
+        }}
+        style={{ marginTop: 8, backgroundColor: '#3E2415', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 16 }}
+      >
+        <Text style={{ color: '#FBE6CF', fontSize: 15, fontWeight: '600' }}>Go to Home</Text>
+      </Pressable>
+      <Pressable onPress={() => retry().catch(() => {})} hitSlop={10}>
+        <Text style={{ color: '#A56312', fontSize: 14, fontWeight: '600' }}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+startBootGuard();
 // Web only: finishes the Shopify login popup. Does nothing on phones.
 WebBrowser.maybeCompleteAuthSession();
 
@@ -152,6 +186,7 @@ export default function RootLayout() {
         <FlyHost />
         <RemoteGate />
         <ToastHost />
+        <CartFxHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

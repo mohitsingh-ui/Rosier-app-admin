@@ -164,6 +164,8 @@ export async function signOut() {
   const hadLogin = hasTokens();
   logout();
   if (!hadLogin) return;
+  // Let the screen change finish first — opening the browser in the middle of a navigation can crash on Android.
+  await new Promise((r) => setTimeout(r, 450));
   try {
     const appRedirect = Linking.createURL('auth');
     const { url } = await post<{ url: string | null }>('/api/auth/logout', { idToken, redirect: appRedirect });

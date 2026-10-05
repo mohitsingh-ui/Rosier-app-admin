@@ -18,6 +18,8 @@ import { routeForHref } from '../../data/banners';
 import { ensureProduct, STORE_URL, useCatalog } from '../../data/catalog';
 import { success } from '../../lib/haptics';
 import { fetchProductJson } from '../../lib/website';
+import { cartAdded } from '../../lib/cartFx';
+import { coinsForAmount } from '../../config/coins';
 import { useCart } from '../../store/shop';
 import { fonts, useTheme } from '../../theme';
 
@@ -118,8 +120,7 @@ export default function WebPage() {
         return;
       }
       add(p.handle, m.variantId, m.qty || 1);
-      success();
-      toast(`${p.title} added to your cart`, 'ok');
+      cartAdded({ coins: coinsForAmount(v?.price ?? 0), title: p.title });
     } else if (m.type === 'link') {
       const href = String(m.href || '');
       if (m.external) {

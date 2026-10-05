@@ -30,6 +30,7 @@ import { Editable } from '../../components/Editable';
 import { AplusBanners, ProductReviews, Stars, useProductPage, WebsiteTabs } from '../../components/ProductExtras';
 import { useProductExtras } from '../../lib/website';
 import { coinsForAmount } from '../../config/coins';
+import { cartAdded } from '../../lib/cartFx';
 import { defaultVariant, findProduct, STORE_URL, useProducts } from '../../data/catalog';
 import { rupee, shortTitle } from '../../lib/format';
 import { success } from '../../lib/haptics';
@@ -139,9 +140,7 @@ export default function ProductScreen() {
   const addToCart = () => {
     if (!variant.available) return;
     add(product.handle, variant.id);
-    flyFrom(heroRef, product.images[0]);
-    success();
-    toast(`Added! You'll earn ${coins} coins on this`, 'coin');
+    cartAdded({ ref: heroRef, image: product.images[0], coins, title: product.title });
   };
 
   return (

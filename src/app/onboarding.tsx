@@ -33,7 +33,9 @@ import { fill, useContent } from '../config/remote';
 import { success, tap } from '../lib/haptics';
 import { useApp } from '../store/app';
 import { fonts } from '../theme';
-import { Aurora, GlowRing, paletteFor, Sparkles, WordReveal } from '../components/IntroFx';
+import { Aurora, GlowRing, LoopMotion, paletteFor, Sparkles, TextReveal } from '../components/IntroFx';
+import { safeColor } from '../lib/color';
+import { markStable, useBoot } from '../lib/bootGuard';
 import { Layer as Burst } from '../components/SeasonalEffects';
 
 const ORANGE = '#B8662F';
@@ -255,8 +257,9 @@ export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const ob = useContent('onboarding');
   const welcomeBonus = useContent('coins').welcomeBonus;
-  const BG = ob.background || '#F1DCC3';
-  const accent = ob.accent || ORANGE;
+  const BG = safeColor(ob.background, '#F1DCC3');
+  const accent = safeColor(ob.accent, ORANGE);
+  const safeMode = useBoot((s) => s.safe);
   const SLIDES = ((ob.slides as Slide[]) ?? []).filter((x) => x.enabled !== false);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const x = useSharedValue(0);
@@ -267,7 +270,9 @@ export default function Onboarding() {
   const input = useRef<TextInput>(null);
 
   const setIntroVersion = useApp((s) => s.setIntroVersion);
-  const vibrant = ob.vibrant !== false;
+  // Safe mode (the app crashed last time): plain intro without the heavy effects.
+  const vibrant = ob.vibrant !== false && !safeMode;
+  const swipe = String((ob as any).swipeStyle || (vibrant ? '3d' : 'flat'));
   const palettes = SLIDES.map((s, i) => paletteFor((s as any).colors, i));
   const [celebrate, setCelebrate] = useState(false);
 
@@ -292,6 +297,7 @@ export default function Onboarding() {
   };
 
   const done = () => {
+    markStable();
     success();
     if (name.trim()) setProfile({ name: name.trim() });
     setIntroVersion(Number(ob.reshowVersion) || 1);
@@ -342,6 +348,15 @@ export default function Onboarding() {
           const idx = (ob.slides as Slide[]).indexOf(s);
           return (
           <View key={s.id ?? i} style={{ width, paddingTop: insets.top + 50 }}>
+            {/* Falling / floating effect behind this slide (admin panel → slide → Background effect). */}
+            {!safeMode && page === i && !!(s as any).bgFx && (s as any).bgFx !== 'none' && (
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, width, height, zIndex: 2 }}>
+                <Burst
+                  key={`${i}:${(s as any).bgFx}`}
+                  effect={{ id: `slide-${i}`, enabled: true, name: 'slide', type: (s as any).bgFx, amount: Number((s as any).bgFxAmount) || 30, speed: 1, size: 1, opacity: 0.9, colors: palettes[i].slice(1), emoji: String((s as any).bgFxEmoji || '✨'), image: '', screens: 'all', stopAfter: 0, startAt: '', endAt: '' } as any}
+                />
+              </View>
+            )}
             {/* Full-screen video: edge to edge, from the very top of the screen (behind the status bar) to the bottom. */}
             {s.art === 'video_full' && !!s.video && (
               <View style={{ position: 'absolute', top: 0, left: 0, width, height: Math.max(height, screenH), overflow: 'hidden' }}>
@@ -350,8 +365,9 @@ export default function Onboarding() {
               </View>
             )}
             <Editable id={`onboarding.slides.${(ob.slides as Slide[]).indexOf(s)}`} label={`Intro slide · ${s.title}`} style={{ flex: 1 }}>
-            <Editable id={`onboarding.slides.${idx}.art`} label="Picture / video area" target={`onboarding.slides.${idx}.artHeight`} base={num((s as any).artHeight, 52, 20, 90)}>
-            <ArtParallax index={i} x={x} width={width} on={vibrant} style={{ height: artH, alignItems: 'center', justifyContent: 'center', transform: [{ scale: s.art === 'video' ? 1 : z.scale }] }}>
+            <Editable id={`onboarding.slides.${idx}.art`} label={s.art === 'video_full' ? 'Space above the title' : 'Picture / video area'} target={`onboarding.slides.${idx}.artHeight`} base={num((s as any).artHeight, 52, 20, 90)}>
+            <ArtParallax index={i} x={x} width={width} mode={swipe} style={{ height: artH, alignItems: 'center', justifyContent: 'center', transform: [{ scale: s.art === 'video' ? 1 : z.scale }] }}>
+              <LoopMotion kind={(s as any).artMotion}>
               {s.art === 'collage' && (
                 <View style={{ width, height: artH }}>
                   {(s.images ?? []).slice(0, COLLAGE.length).map((uri, k) => (
@@ -369,9 +385,10 @@ export default function Onboarding() {
                   </Editable>
                 </Animated.View>
               )}
+              </LoopMotion>
             </ArtParallax>
             </Editable>
-            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={(s as any).titleColor || accent} subColor={(s as any).subColor} titleSize={num((s as any).titleSize, 34, 16, 64)} subSize={num((s as any).subSize, 15, 10, 28)} light={s.art === 'video_full' && !!s.video} active={vibrant && page === i} />
+            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={safeColor((s as any).titleColor, accent)} subColor={safeColor((s as any).subColor, '') || undefined} textFx={(s as any).textFx} titleSize={num((s as any).titleSize, 34, 16, 64)} subSize={num((s as any).subSize, 15, 10, 28)} light={s.art === 'video_full' && !!s.video} active={!safeMode && page === i} />
             {!!s.chips?.length && page === i && <Steps chips={s.chips} accent={accent} />}
             {!!s.showNameInput && (
               <Animated.View entering={FadeIn.delay(100)} style={{ paddingHorizontal: 28, marginTop: 16 }}>
@@ -427,19 +444,44 @@ export default function Onboarding() {
 }
 
 /** The slide's picture area: drifts, tilts and shrinks as you swipe (3D-ish parallax). */
-function ArtParallax({ index, x, width, on, style, children }: { index: number; x: SharedValue<number>; width: number; on: boolean; style: any; children: React.ReactNode }) {
+/**
+ * How the picture moves while swiping between slides (admin panel → Intro slides → Swipe animation).
+ *  3d · cube · zoom · stack · fade · flip · rise · flat
+ */
+function ArtParallax({ index, x, width, mode, style, children }: { index: number; x: SharedValue<number>; width: number; mode: string; style: any; children: React.ReactNode }) {
   const a = useAnimatedStyle(() => {
-    if (!on) return {};
     const p = (x.value - index * width) / width;
-    return {
-      opacity: interpolate(Math.abs(p), [0, 0.9], [1, 0.2], Extrapolation.CLAMP),
-      transform: [
-        { perspective: 900 },
-        { translateX: interpolate(p, [-1, 0, 1], [width * 0.25, 0, -width * 0.25]) },
-        { rotateY: `${interpolate(p, [-1, 0, 1], [-25, 0, 25])}deg` },
-        { scale: interpolate(Math.abs(p), [0, 1], [1, 0.82], Extrapolation.CLAMP) },
-      ],
-    };
+    const ap = Math.min(1, Math.abs(p));
+    switch (mode) {
+      case 'flat':
+        return {};
+      case 'cube':
+        return {
+          opacity: interpolate(ap, [0, 1], [1, 0.4]),
+          transform: [{ perspective: 700 }, { translateX: interpolate(p, [-1, 0, 1], [width * 0.5, 0, -width * 0.5]) }, { rotateY: `${interpolate(p, [-1, 0, 1], [-70, 0, 70], Extrapolation.CLAMP)}deg` }, { translateX: interpolate(p, [-1, 0, 1], [-width * 0.5, 0, width * 0.5]) }],
+        };
+      case 'zoom':
+        return { opacity: interpolate(ap, [0, 0.8], [1, 0], Extrapolation.CLAMP), transform: [{ scale: interpolate(p, [-1, 0, 1], [1.6, 1, 0.4], Extrapolation.CLAMP) }] };
+      case 'stack':
+        // The picture stays in place and shrinks away like a deck of cards.
+        return { opacity: interpolate(ap, [0, 1], [1, 0.2]), transform: [{ translateX: p > 0 ? p * width * 0.85 : 0 }, { scale: interpolate(ap, [0, 1], [1, 0.75], Extrapolation.CLAMP) }] };
+      case 'fade':
+        return { opacity: interpolate(ap, [0, 0.7], [1, 0], Extrapolation.CLAMP), transform: [{ translateX: p * width }] };
+      case 'flip':
+        return { opacity: interpolate(ap, [0, 0.5, 1], [1, 0.6, 0]), transform: [{ perspective: 900 }, { rotateX: `${interpolate(p, [-1, 0, 1], [80, 0, -80], Extrapolation.CLAMP)}deg` }] };
+      case 'rise':
+        return { opacity: interpolate(ap, [0, 0.8], [1, 0], Extrapolation.CLAMP), transform: [{ translateY: interpolate(ap, [0, 1], [0, 160]) }, { rotate: `${interpolate(p, [-1, 0, 1], [-12, 0, 12])}deg` }] };
+      default:
+        return {
+          opacity: interpolate(ap, [0, 0.9], [1, 0.2], Extrapolation.CLAMP),
+          transform: [
+            { perspective: 900 },
+            { translateX: interpolate(p, [-1, 0, 1], [width * 0.25, 0, -width * 0.25]) },
+            { rotateY: `${interpolate(p, [-1, 0, 1], [-25, 0, 25])}deg` },
+            { scale: interpolate(ap, [0, 1], [1, 0.82], Extrapolation.CLAMP) },
+          ],
+        };
+    }
   });
   return (
     <Animated.View pointerEvents="box-none" style={[style, a]}>
@@ -448,7 +490,7 @@ function ArtParallax({ index, x, width, on, style, children }: { index: number; 
   );
 }
 
-function SlideText({ index, x, width, title, sub, logo, accent, light, active, titleSize = 34, subSize = 15, subColor }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean; active?: boolean; titleSize?: number; subSize?: number; subColor?: string }) {
+function SlideText({ index, x, width, title, sub, logo, accent, light, active, titleSize = 34, subSize = 15, subColor, textFx }: { index: number; x: SharedValue<number>; width: number; title: string; sub: string; logo: boolean; accent: string; light?: boolean; active?: boolean; titleSize?: number; subSize?: number; subColor?: string; textFx?: string }) {
   const a = useAnimatedStyle(() => {
     const p = (x.value - index * width) / width;
     return {
@@ -463,8 +505,8 @@ function SlideText({ index, x, width, title, sub, logo, accent, light, active, t
           <RosierLogo width={110} color={light ? '#FFFFFF' : '#5A3520'} />
         </View>
       )}
-      <WordReveal text={title} active={!!active} style={{ fontFamily: fonts.sansSemi, fontSize: titleSize, lineHeight: titleSize * 1.18, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }} />
-      <Text style={{ fontFamily: fonts.sans, fontSize: subSize, color: subColor || (light ? 'rgba(255,255,255,0.9)' : '#7A6453'), marginTop: 4, lineHeight: subSize * 1.47 }}>{sub}</Text>
+      <TextReveal key={active ? 'on' : 'off'} fx={textFx || 'words'} text={title} active={!!active} style={{ fontFamily: fonts.sansSemi, fontSize: titleSize, lineHeight: titleSize * 1.18, color: light ? '#FFFFFF' : accent, letterSpacing: 0.5 }} />
+      <Animated.Text key={active ? 's-on' : 's-off'} entering={active && textFx !== 'none' ? FadeIn.delay(350).duration(600) : undefined} style={{ fontFamily: fonts.sans, fontSize: subSize, color: subColor || (light ? 'rgba(255,255,255,0.9)' : '#7A6453'), marginTop: 4, lineHeight: subSize * 1.47 }}>{sub}</Animated.Text>
     </Animated.View>
   );
 }
