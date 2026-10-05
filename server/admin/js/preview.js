@@ -48,6 +48,7 @@ const ROUTE_FOR = {
   effects: '/home',
   coupons: '/coupons',
   rewards: '/cart',
+  cartFx: '/shop',
   push: '/home',
   tracking: '/track',
   productPage: '/product/a2-desi-cow-ghee-hand-churned-from-curd',
@@ -242,6 +243,10 @@ export function previewRefresh() {
 }
 
 /** Show an effect in the phone for a few seconds, even if it's switched off. */
+export function previewTryCartFx() {
+  post({ type: 'rosier:tryCartFx' });
+}
+
 export function previewTryEffect(effect) {
   post({ type: 'rosier:tryEffect', effect: JSON.parse(JSON.stringify(effect)) });
 }

@@ -175,12 +175,12 @@ function partsFor(id) {
   if (id === 'theme.cards')
     return { title: 'Product cards', parts: [layout(['gridColumns', 'productImageRatio', 'listImageScale', 'listImageFit', 'dealCardWidth', 'dealImageScale', 'cardRadius'], 'Size (all cards)'), themeColours(['imageBg', 'cardStrong', 'card', 'border', 'text', 'price', 'green', 'primary'])] };
   if ((m = id.match(/^onboarding\.slides\.(\d+)\.(video|art)$/))) {
-    const keys = m[2] === 'video' ? ['videoWidth', 'videoRatio', 'videoRadius', 'videoFit', 'videoSound'] : ['artHeight', 'artScale', 'art'];
+    const keys = m[2] === 'video' ? ['videoWidth', 'videoRatio', 'videoRadius', 'videoFit', 'videoSound'] : ['artHeight', 'artScale', 'art', 'artMotion', 'bgFx', 'bgFxEmoji', 'bgFxAmount'];
     return {
       title: m[2] === 'video' ? 'Intro video size' : 'Intro picture area',
       parts: [
         { key: 'onboarding', path: ['slides', Number(m[1])], title: 'Size', fields: pick(fieldsAt('onboarding', ['slides', 0]), keys) },
-        { key: 'onboarding', path: ['slides', Number(m[1])], title: 'Text size & colour', fields: pick(fieldsAt('onboarding', ['slides', 0]), ['titleSize', 'titleColor', 'subSize', 'subColor']) },
+        { key: 'onboarding', path: ['slides', Number(m[1])], title: 'Text size & colour', fields: pick(fieldsAt('onboarding', ['slides', 0]), ['textFx', 'titleSize', 'titleColor', 'subSize', 'subColor']) },
       ],
     };
   }
@@ -191,7 +191,7 @@ function partsFor(id) {
       title: 'Intro slide',
       parts: [
         { key: 'onboarding', path: ['slides', Number(m[1])], title: 'This slide', fields: fieldsAt('onboarding', ['slides', 0]) },
-        { key: 'onboarding', path: [], title: 'All intro slides', fields: pick(fieldsAt('onboarding', []), ['background', 'accent', 'skipLabel', 'buttonLabel']) },
+        { key: 'onboarding', path: [], title: 'All intro slides', fields: pick(fieldsAt('onboarding', []), ['vibrant', 'swipeStyle', 'background', 'accent', 'skipLabel', 'buttonLabel']) },
       ],
     };
   return null;

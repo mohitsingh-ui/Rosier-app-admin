@@ -1266,5 +1266,30 @@
         "extraCss": ""
       }
     ]
+  },
+  "cartFx": {
+    "toastEnabled": true,
+    "toastText": "Added to cart · earn {coins} coins",
+    "toastPosition": "top",
+    "toastAnim": "slideDown",
+    "toastIcon": "coin",
+    "toastEmoji": "🛒",
+    "toastBg": "#3E2415",
+    "toastTextColor": "#FBE6CF",
+    "toastIconColor": "#F3D48B",
+    "toastRadius": 18,
+    "toastSeconds": 2.2,
+    "fly": true,
+    "cartBounce": true,
+    "haptic": true,
+    "bigTick": false,
+    "confetti": false,
+    "sparkles": true,
+    "hearts": false,
+    "coins": false,
+    "petals": false,
+    "emoji": "",
+    "burstAmount": 26,
+    "burstSeconds": 1.6
   }
 }

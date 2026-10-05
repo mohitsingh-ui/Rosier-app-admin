@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { renderFields } from './fields.js';
 import { confirmDialog, uploadZone } from './pickers.js';
 import { loadContent, onChange, sectionDef, setSection, state } from './store.js';
-import { previewSection, previewTryEffect, previewUpdate } from './preview.js';
+import { previewSection, previewTryCartFx, previewTryEffect, previewUpdate } from './preview.js';
 import { pageOpened } from './inspector.js';
 import { add, clear, fill, clone, copyText, debounce, fileSize, fullDate, h, icon, randomId, relTime, toast } from './util.js';
 
@@ -170,6 +170,16 @@ export function sectionPage(root, key) {
         },
         icon('play-circle-outline'),
         'Play in live preview',
+      ),
+    );
+  }
+  if (key === 'cartFx') {
+    extras.push(
+      h(
+        'button',
+        { type: 'button', class: 'btn btn-ghost', title: 'Plays the add-to-cart message and effects in the phone preview', onclick: () => previewTryCartFx() },
+        icon('play-circle-outline'),
+        'Try it in the preview',
       ),
     );
   }
