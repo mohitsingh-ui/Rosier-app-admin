@@ -20,7 +20,8 @@
         "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.rosierfoods.app"
+      "package": "com.rosierfoods.app",
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
