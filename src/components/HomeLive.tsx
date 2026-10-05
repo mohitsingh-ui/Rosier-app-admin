@@ -11,6 +11,9 @@ import { useAuth, useLoggedIn } from '../store/auth';
 import { fonts, useTheme } from '../theme';
 import { trackState, trackSummary } from './Tracking';
 import { toast } from './Toast';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Editable } from './Editable';
+import { Img, PressableScale } from './ui';
 
 const STEPS = ['Placed', 'Packed', 'Shipped', 'Out', 'Delivered'];
 
@@ -114,5 +117,39 @@ export function PushAsk() {
         </View>
       </View>
     </Animated.View>
+  );
+}
+
+/* ───────── Website pages promoted on Home (admin → Website pages in the app → "Show a card on Home") ───────── */
+
+export function HomePageCards() {
+  const t = useTheme();
+  const pages = (((useContent('webPages' as any) as any)?.items ?? []) as any[]).filter((p) => p && p.enabled !== false && p.handle && p.showOnHome);
+  if (!pages.length) return null;
+  return (
+    <View style={{ marginHorizontal: 16, marginBottom: 12, gap: 10 }}>
+      {pages.map((p, i) => (
+        <Animated.View key={p.handle + i} entering={FadeInDown.delay(60 * i).springify()}>
+          <Editable id="webPages" label="Website page card">
+            <PressableScale onPress={() => router.push({ pathname: '/page/[handle]', params: { handle: p.id || p.handle } })} style={{ borderRadius: 20, overflow: 'hidden' }}>
+              {p.homeImage ? (
+                <Img source={p.homeImage} size={600} style={{ width: '100%', aspectRatio: Number(p.homeImageRatio) > 0 ? Number(p.homeImageRatio) : 2.4 }} contentFit="cover" />
+              ) : (
+                <LinearGradient colors={['#5A2E14', '#A56312']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
+                  <Text style={{ fontSize: 34 }}>{p.homeEmoji || '🎁'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: fonts.serif, fontSize: 19, color: '#FFF5E8' }}>{p.homeTitle || p.title}</Text>
+                    {!!(p.homeSub ?? 'Tap to explore') && <Text style={{ fontFamily: fonts.sans, fontSize: 12.5, color: '#F3D9BC', marginTop: 2 }}>{p.homeSub ?? 'Tap to explore'}</Text>}
+                  </View>
+                  <View style={{ backgroundColor: '#F3D48B', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7 }}>
+                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12, color: '#3E2415' }}>{p.homeButton || 'View'}</Text>
+                  </View>
+                </LinearGradient>
+              )}
+            </PressableScale>
+          </Editable>
+        </Animated.View>
+      ))}
+    </View>
   );
 }

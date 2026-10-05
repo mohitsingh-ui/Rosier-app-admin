@@ -8,7 +8,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from '../../components/Toast';
@@ -99,7 +99,19 @@ export default function WebPage() {
   const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const web = useRef<any>(null);
+  // Never leave people staring at a spinner: hide it after 12 s whatever happens.
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => setLoading(false), 12000);
+    return () => clearTimeout(t);
+  }, [loading, attempt]);
+  const retry = () => {
+    setFailed(false);
+    setLoading(true);
+    setAttempt((n) => n + 1); // a fresh web view (the old one may be gone)
+  };
 
   const onMessage = async (raw: string) => {
     let m: any;
@@ -157,21 +169,40 @@ export default function WebPage() {
     const { WebView } = require('react-native-webview');
     body = (
       <WebView
+        key={attempt}
         ref={web}
         source={{ uri: url }}
         injectedJavaScriptBeforeContentLoaded={js}
         injectedJavaScript={js}
         onMessage={(e: any) => onMessage(e.nativeEvent.data)}
         onLoadEnd={() => setLoading(false)}
+        onLoadProgress={(e: any) => e?.nativeEvent?.progress > 0.55 && setLoading(false)}
         onError={() => {
           setFailed(true);
           setLoading(false);
         }}
+        onHttpError={(e: any) => {
+          if (e?.nativeEvent?.statusCode >= 500) {
+            setFailed(true);
+            setLoading(false);
+          }
+        }}
+        // Android: if the page uses too much memory the phone stops it — show "try again" instead of closing the app.
+        onRenderProcessGone={() => {
+          setFailed(true);
+          setLoading(false);
+        }}
+        // iPhone: same thing — just load it again.
+        onContentProcessDidTerminate={() => setAttempt((n) => n + 1)}
+        cacheEnabled
+        cacheMode="LOAD_DEFAULT"
         onShouldStartLoadWithRequest={(req: any) => {
           // Stay on this page; send everything else to the app (or the browser).
           if (req.url === 'about:blank' || req.isTopFrame === false) return true;
           const same = /^https?:\/\/(www\.)?rosierfoods\.com/i.test(req.url);
-          if (same && req.url.replace(/^https?:\/\/(www\.)?rosierfoods\.com/i, '').split(/[?#]/)[0].replace(/\/$/, '') === `/pages/${pageHandle}`) return true;
+          const path = req.url.replace(/^https?:\/\/(www\.)?rosierfoods\.com/i, '').split(/[?#]/)[0].replace(/\/$/, '');
+          if (same && (path === `/pages/${pageHandle}` || path.endsWith(`/pages/${pageHandle}`))) return true;
+          if (same && /^\/(password|account\/login|cdn\/)/.test(path)) return true;
           if (same && /\/(contact|challenge)/.test(req.url)) return true;
           onMessage(JSON.stringify({ type: 'link', href: same ? req.url.replace(/^https?:\/\/(www\.)?rosierfoods\.com/i, '') : req.url, external: !same }));
           return false;
@@ -195,15 +226,11 @@ export default function WebPage() {
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, gap: 12 }}>
             <Ionicons name="cloud-offline-outline" size={44} color={t.textMute} />
             <Text style={{ fontFamily: fonts.sans, color: t.textSoft, textAlign: 'center' }}>This page couldn’t load. Check your internet and try again.</Text>
-            <Pressable
-              onPress={() => {
-                setFailed(false);
-                setLoading(true);
-                web.current?.reload?.();
-              }}
-              style={{ paddingHorizontal: 22, height: 42, borderRadius: 21, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center' }}
-            >
+            <Pressable onPress={retry} style={{ paddingHorizontal: 22, height: 42, borderRadius: 21, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontFamily: fonts.sansSemi, color: '#fff' }}>Try again</Text>
+            </Pressable>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(url, { toolbarColor: '#3E2415', controlsColor: '#F3D48B' })} hitSlop={10}>
+              <Text style={{ fontFamily: fonts.sansSemi, color: t.primary, marginTop: 6 }}>Open in browser</Text>
             </Pressable>
           </View>
         ) : (

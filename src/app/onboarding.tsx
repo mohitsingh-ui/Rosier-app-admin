@@ -358,7 +358,7 @@ export default function Onboarding() {
               </View>
             )}
             {/* Full-screen video: edge to edge, from the very top of the screen (behind the status bar) to the bottom. */}
-            {s.art === 'video_full' && !!s.video && (
+            {s.art === 'video_full' && !!s.video && !safeMode && Math.abs(page - i) <= 1 && (
               <View style={{ position: 'absolute', top: 0, left: 0, width, height: Math.max(height, screenH), overflow: 'hidden' }}>
                 <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} w={width} h={Math.max(height, screenH)} muteTop={insets.top + 12} fit={z.fit} />
                 <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(20,10,4,0.8)']} locations={[0, 0.18, 0.45, 1]} style={StyleSheet.absoluteFill} />
@@ -378,7 +378,7 @@ export default function Onboarding() {
               {s.art === 'churn' && !!s.image && <Churn uri={s.image} size={Math.min(width * 0.82, artH) * z.scale} />}
               {s.art === 'coins' && <CoinRain width={width} />}
               {s.art === 'image' && !!s.image && <BigImage uri={s.image} size={Math.min(width * 0.86, artH) * z.scale} />}
-              {s.art === 'video' && !!s.video && (
+              {s.art === 'video' && !!s.video && !safeMode && Math.abs(page - i) <= 1 && (
                 <Animated.View entering={FadeIn.duration(500)}>
                   <Editable id={`onboarding.slides.${idx}.video`} label="Video size" target={`onboarding.slides.${idx}.videoWidth`} base={num((s as any).videoWidth, 62, 20, 100)}>
                     <SlideVideo uri={s.video} poster={s.poster} sound={s.videoSound} active={page === i} radius={z.radius} w={z.vw} h={z.vh} fit={z.fit} />
@@ -388,7 +388,7 @@ export default function Onboarding() {
               </LoopMotion>
             </ArtParallax>
             </Editable>
-            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={safeColor((s as any).titleColor, accent)} subColor={safeColor((s as any).subColor, '') || undefined} textFx={(s as any).textFx} titleSize={num((s as any).titleSize, 34, 16, 64)} subSize={num((s as any).subSize, 15, 10, 28)} light={s.art === 'video_full' && !!s.video} active={!safeMode && page === i} />
+            <SlideText index={i} x={x} width={width} title={s.title} sub={s.sub} logo={!!s.showLogo} accent={safeColor((s as any).titleColor, accent)} subColor={safeColor((s as any).subColor, '') || undefined} textFx={(s as any).textFx} titleSize={num((s as any).titleSize, 34, 16, 64)} subSize={num((s as any).subSize, 15, 10, 28)} light={s.art === 'video_full' && !!s.video && !safeMode} active={!safeMode && page === i} />
             {!!s.chips?.length && page === i && <Steps chips={s.chips} accent={accent} />}
             {!!s.showNameInput && (
               <Animated.View entering={FadeIn.delay(100)} style={{ paddingHorizontal: 28, marginTop: 16 }}>

@@ -31,6 +31,11 @@ const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'obj
 
 /** Remote values win; anything missing falls back to the built-in default. */
 function merge<T>(base: T, over: unknown): T {
+  // Lists: items that match a built-in item (same id) get any new settings it has.
+  if (Array.isArray(base) && Array.isArray(over)) {
+    const byId = new Map(base.filter((b) => isObj(b) && b.id != null).map((b: any) => [String(b.id), b]));
+    return over.map((it) => (isObj(it) && it.id != null && byId.has(String(it.id)) ? merge(byId.get(String(it.id)), it) : it)) as T;
+  }
   if (!isObj(base) || !isObj(over)) return (over === undefined || over === null ? base : over) as T;
   const out: Record<string, any> = { ...base };
   for (const [k, v] of Object.entries(over)) out[k] = k in (base as any) ? merge((base as any)[k], v) : v;

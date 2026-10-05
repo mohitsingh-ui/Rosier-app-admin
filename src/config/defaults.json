@@ -150,7 +150,8 @@
         "subColor": ""
       }
     ],
-    "vibrant": true
+    "vibrant": true,
+    "showAfterLogout": true
   },
   "popup": {
     "enabled": false,
@@ -1263,7 +1264,14 @@
         "handle": "hampers",
         "title": "Gift Hampers",
         "hideSiteChrome": true,
-        "extraCss": ""
+        "extraCss": "",
+        "showOnHome": true,
+        "homeImage": "",
+        "homeImageRatio": 2.4,
+        "homeEmoji": "🎁",
+        "homeTitle": "Parampara Gift Hampers",
+        "homeSub": "Festive hampers made the old way · Pre-book now",
+        "homeButton": "Explore"
       }
     ]
   },

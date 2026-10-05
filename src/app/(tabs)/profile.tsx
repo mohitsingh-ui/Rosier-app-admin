@@ -14,7 +14,7 @@ import { isLive, useContent } from '../../config/remote';
 import { useMembership } from '../../lib/membership';
 import { registerPush, usePushState } from '../../lib/push';
 import { Linking, Platform } from 'react-native';
-import { useApp } from '../../store/app';
+import { introAfterLogout, useApp } from '../../store/app';
 import { toast } from '../../components/Toast';
 import { signOut, useAuth, useLoggedIn, useShopifyFlags } from '../../store/auth';
 import { useCoins, useOrders, useWishlist } from '../../store/shop';
@@ -252,7 +252,7 @@ export default function Profile() {
         onPress={() => {
           logout();
           signOut().catch(() => {});
-          router.replace('/home');
+          router.replace(introAfterLogout() ? '/onboarding' : '/home');
           toast('You’re logged out', 'ok');
         }}
         style={{ marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: t.border }}

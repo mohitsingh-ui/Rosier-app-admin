@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getContent } from '../config/remote';
 import { storage } from './storage';
 
 type ThemePref = 'light' | 'dark' | 'system';
@@ -34,6 +35,15 @@ type AppState = {
   logout: () => void;
 };
 
+/** Whether logging out takes people back to the intro slides. */
+export const introAfterLogout = () => {
+  try {
+    return (getContent('onboarding') as any)?.showAfterLogout !== false;
+  } catch {
+    return true;
+  }
+};
+
 export const useApp = create<AppState>()(
   persist(
     (set) => ({
@@ -65,8 +75,8 @@ export const useApp = create<AppState>()(
           ].slice(0, 30),
         })),
       markAllRead: () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
-      // Logging out keeps the intro as seen, so the app opens straight to Home as a guest.
-      logout: () => set({ menuOpen: false }),
+      // Logging out shows the intro again (admin panel → Intro slides → "Show the intro again after logout").
+      logout: () => set({ menuOpen: false, onboarded: !introAfterLogout() }),
     }),
     {
       name: 'rosier-app',

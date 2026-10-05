@@ -10,6 +10,7 @@ export default function Index() {
   const wanted = Number(useContent('onboarding').reshowVersion) || 1;
   const { ready, safe } = useBoot();
   if (!ready) return <View style={{ flex: 1, backgroundColor: '#F1DCC3' }} />;
-  // Safe mode (the app crashed last time): go straight to Home so it always opens.
-  return <Redirect href={safe || (onboarded && seen >= wanted) ? '/home' : '/onboarding'} />;
+  // (In safe mode the intro still shows, just the light version — see onboarding.tsx.)
+  void safe;
+  return <Redirect href={onboarded && seen >= wanted ? '/home' : '/onboarding'} />;
 }

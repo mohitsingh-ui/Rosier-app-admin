@@ -4,7 +4,7 @@ import React, { ReactNode, useEffect } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInLeft, interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useApp } from '../store/app';
+import { introAfterLogout, useApp } from '../store/app';
 import { signOut } from '../store/auth';
 import { fonts, useTheme } from '../theme';
 import { Avatar } from './Avatar';
@@ -89,7 +89,7 @@ export function MenuShell({ children }: { children: ReactNode }) {
                   go(() => {
                     logout();
                     signOut().catch(() => {});
-                    router.replace('/home');
+                    router.replace(introAfterLogout() ? '/onboarding' : '/home');
                   })
                 }
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 10, marginTop: 20 }}
