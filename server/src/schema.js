@@ -55,6 +55,7 @@ export const SCHEMA = [
     icon: 'presentation-play',
     description: 'The slides people see the first time they open the app. Raise "Show again version" to show them to everyone once more.',
     fields: [
+      { key: 'showAfterLogout', type: 'boolean', label: 'Show the intro again after someone logs out' },
       { key: 'reshowVersion', type: 'number', label: 'Show again version', help: 'Increase by 1 and publish: every user sees the intro slides again on their next app open.' },
       { key: 'vibrant', type: 'boolean', label: 'Colourful animated background (glowing colours, sparkles, 3D swipe, confetti at the end)', help: 'Off = the plain background colour below.' },
       {
@@ -897,6 +898,13 @@ export const SCHEMA = [
           { key: 'title', type: 'text', label: 'Title in the app' },
           { key: 'hideSiteChrome', type: 'boolean', label: 'Hide the website’s header, footer and chat buttons', help: 'So it feels like part of the app.' },
           { key: 'extraCss', type: 'textarea', label: 'Extra CSS (advanced, optional)' },
+          { key: 'showOnHome', type: 'boolean', label: 'Show a card for this page on the Home screen' },
+          { key: 'homeImage', type: 'image', label: 'Home card picture (optional)', help: 'A wide banner. Leave empty for a simple card with the title below.', showIf: { showOnHome: [true] } },
+          { key: 'homeImageRatio', type: 'number', label: 'Picture shape (width ÷ height)', help: 'Default 2.4. 1 = square, 1.6 = a bit wide.', showIf: { showOnHome: [true] } },
+          { key: 'homeEmoji', type: 'text', label: 'Card emoji', showIf: { showOnHome: [true] } },
+          { key: 'homeTitle', type: 'text', label: 'Card title', showIf: { showOnHome: [true] } },
+          { key: 'homeSub', type: 'text', label: 'Card text', showIf: { showOnHome: [true] } },
+          { key: 'homeButton', type: 'text', label: 'Card button', showIf: { showOnHome: [true] } },
         ],
       },
     ],
