@@ -45,6 +45,7 @@ const ROUTE_FOR = {
   help: '/help',
   search: '/search',
   theme: '/home',
+  festival: '/home',
   effects: '/home',
   coupons: '/coupons',
   rewards: '/cart',

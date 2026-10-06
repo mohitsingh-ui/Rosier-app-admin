@@ -156,7 +156,7 @@ export function allowedAppRedirect(u) {
   return /^(rosier|exp|exps):\/\//.test(u) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(u);
 }
 
-export async function startLogin(appRedirect, callbackUrl) {
+export async function startLogin(appRedirect, callbackUrl, loginHint = '') {
   const s = await getSettings();
   if (!s.customerClientId || !s.customerClientSecret) throw new ShopifyError('Customer login is not set up yet.', 503);
   const d = await discover();
@@ -175,6 +175,8 @@ export async function startLogin(appRedirect, callbackUrl) {
     nonce,
     code_challenge: b64url(crypto.createHash('sha256').update(verifier).digest()),
     code_challenge_method: 'S256',
+    // Pre-fills their email on Shopify's sign-in page (typed in the app).
+    ...(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginHint) ? { login_hint: loginHint } : {}),
   }).toString();
   return url.toString();
 }
@@ -753,4 +755,94 @@ export async function testConnection(kind) {
     return `Admin API connected to ${d.shop.name} (${d.shop.myshopifyDomain}).`;
   }
   throw new ShopifyError('Unknown test', 400);
+}
+
+/* ───────── Saved addresses (Customer Account API) ───────── */
+
+const ADDRESS_FIELDS = 'id firstName lastName company address1 address2 city zoneCode province territoryCode zip phoneNumber formatted';
+
+async function customerGql(accessToken, query, variables = {}) {
+  if (!accessToken) throw new ShopifyError('Please log in again.', 401);
+  const d = await discover();
+  const json = await http(d.graphql, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: accessToken }, body: JSON.stringify({ query, variables }) }, 'Shopify customer API');
+  gqlErrors(json, 'Shopify customer API');
+  return json?.data;
+}
+
+const mapAddress = (a, def) => ({
+  id: a.id,
+  firstName: a.firstName ?? '',
+  lastName: a.lastName ?? '',
+  company: a.company ?? '',
+  address1: a.address1 ?? '',
+  address2: a.address2 ?? '',
+  city: a.city ?? '',
+  zoneCode: a.zoneCode ?? '',
+  province: a.province ?? '',
+  country: a.territoryCode ?? 'IN',
+  zip: a.zip ?? '',
+  phone: a.phoneNumber ?? '',
+  formatted: Array.isArray(a.formatted) ? a.formatted.join(', ') : '',
+  isDefault: !!def && def === a.id,
+});
+
+export async function customerAddresses(accessToken) {
+  const data = await customerGql(accessToken, `query { customer { defaultAddress { id } addresses(first: 20) { nodes { ${ADDRESS_FIELDS} } } } }`);
+  const c = data?.customer;
+  if (!c) throw new ShopifyError('Please log in again.', 401);
+  const def = c.defaultAddress?.id;
+  return (c.addresses?.nodes ?? []).map((a) => mapAddress(a, def)).sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+
+function addressInput(a = {}) {
+  const clip = (v, n) => String(v ?? '').trim().slice(0, n);
+  let phone = String(a.phone ?? '').replace(/[^\d+]/g, '');
+  if (phone && !phone.startsWith('+')) phone = phone.length === 10 ? `+91${phone}` : `+${phone}`;
+  const out = {
+    firstName: clip(a.firstName, 60),
+    lastName: clip(a.lastName, 60),
+    company: clip(a.company, 80),
+    address1: clip(a.address1, 200),
+    address2: clip(a.address2, 200),
+    city: clip(a.city, 80),
+    zoneCode: clip(a.zoneCode, 8).toUpperCase(),
+    territoryCode: clip(a.country || 'IN', 2).toUpperCase(),
+    zip: clip(a.zip, 12),
+    phoneNumber: phone || null,
+  };
+  if (!out.firstName || !out.address1 || !out.city || !out.zip) throw new ShopifyError('Please fill in name, address, city and PIN code.', 400);
+  if (out.territoryCode === 'IN' && !/^\d{6}$/.test(out.zip)) throw new ShopifyError('PIN code should be 6 digits.', 400);
+  if (phone && !/^\+\d{8,15}$/.test(phone)) throw new ShopifyError('Please check the phone number.', 400);
+  return out;
+}
+
+function userErrors(r, what) {
+  const errs = r?.userErrors ?? [];
+  if (errs.length) throw new ShopifyError(errs.map((e) => e.message).join('; ') || `Couldn’t ${what}`, 400);
+}
+
+export async function createAddress(accessToken, address, makeDefault = false) {
+  const data = await customerGql(
+    accessToken,
+    `mutation($address: CustomerAddressInput!, $def: Boolean) { customerAddressCreate(address: $address, defaultAddress: $def) { customerAddress { id } userErrors { field message } } }`,
+    { address: addressInput(address), def: !!makeDefault },
+  );
+  userErrors(data?.customerAddressCreate, 'save the address');
+  return customerAddresses(accessToken);
+}
+
+export async function updateAddress(accessToken, id, address, makeDefault = false) {
+  const data = await customerGql(
+    accessToken,
+    `mutation($id: ID!, $address: CustomerAddressInput, $def: Boolean) { customerAddressUpdate(addressId: $id, address: $address, defaultAddress: $def) { customerAddress { id } userErrors { field message } } }`,
+    { id: String(id), address: address ? addressInput(address) : null, def: !!makeDefault },
+  );
+  userErrors(data?.customerAddressUpdate, 'update the address');
+  return customerAddresses(accessToken);
+}
+
+export async function deleteAddress(accessToken, id) {
+  const data = await customerGql(accessToken, `mutation($id: ID!) { customerAddressDelete(addressId: $id) { deletedAddressId userErrors { field message } } }`, { id: String(id) });
+  userErrors(data?.customerAddressDelete, 'delete the address');
+  return customerAddresses(accessToken);
 }

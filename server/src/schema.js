@@ -48,6 +48,23 @@ const SECTION_TYPES = [
   { value: 'pillars', label: 'Rosier experience (4 pillars)' },
 ];
 
+const FESTIVAL_OPTIONS = [
+  { value: 'diwali', label: '🪔 Diwali' },
+  { value: 'holi', label: '🎨 Holi' },
+  { value: 'navratri', label: '💃 Navratri' },
+  { value: 'durga_puja', label: '🌺 Durga Puja' },
+  { value: 'dussehra', label: '🏹 Dussehra' },
+  { value: 'ganesh', label: '🙏 Ganesh Chaturthi' },
+  { value: 'rakhi', label: '🎀 Raksha Bandhan' },
+  { value: 'independence', label: '🇮🇳 Independence / Republic Day' },
+  { value: 'janmashtami', label: '🦚 Janmashtami' },
+  { value: 'sankranti', label: '🪁 Makar Sankranti / Pongal / Lohri' },
+  { value: 'onam', label: '🌼 Onam' },
+  { value: 'eid', label: '🌙 Eid' },
+  { value: 'baisakhi', label: '🌾 Baisakhi' },
+  { value: 'christmas', label: '🎄 Christmas & New Year' },
+];
+
 export const SCHEMA = [
   {
     key: 'onboarding',
@@ -1149,6 +1166,64 @@ export const SCHEMA = [
           },
           { key: 'stopAfter', type: 'number', label: 'Stop after (seconds)', help: '0 = keeps going. 8 = a short burst each time the app opens.' },
           ...schedule,
+        ],
+      },
+    ],
+  },
+  {
+    key: 'festival',
+    title: 'Festival theme',
+    icon: 'firework',
+    description: 'Dress the whole app for an Indian festival — colours, a festive bunting on the bottom bar, a greeting on Home and a matching effect (diyas, Holi colours, kites…). Only you can switch it, from here; it works with both light and dark mode. Turn it on now, or set dates in advance.',
+    fields: [
+      {
+        key: 'mode',
+        type: 'select',
+        label: 'Festival theme',
+        options: [
+          { value: 'off', label: 'Off (normal Rosier colours)' },
+          { value: 'now', label: 'On now — choose the festival below' },
+          { value: 'schedule', label: 'Automatic — by the dates in the calendar below' },
+        ],
+      },
+      { key: 'preset', type: 'select', label: 'Festival', options: FESTIVAL_OPTIONS, showIf: { mode: ['now'] } },
+      { key: 'greeting', type: 'text', label: 'Greeting on Home (optional)', help: 'Leave empty for the festival’s own greeting, e.g. “Happy Diwali! May your home glow…”' },
+      { key: 'showGreeting', type: 'boolean', label: 'Show the greeting card on Home' },
+      { key: 'showBunting', type: 'boolean', label: 'Show festive bunting on the bottom bar' },
+      {
+        key: 'effect',
+        type: 'select',
+        label: 'Falling effect on Home',
+        options: [
+          { value: 'auto', label: 'Matching the festival (diyas, colours, kites…)' },
+          { value: 'none', label: 'None' },
+          { value: 'sparkles', label: '✦ Sparkles' },
+          { value: 'diyas', label: '🪔 Diyas' },
+          { value: 'holi', label: '🎨 Holi colours' },
+          { value: 'petals', label: '🌸 Petals' },
+          { value: 'confetti', label: '🎉 Confetti' },
+          { value: 'kites', label: '🪁 Kites' },
+          { value: 'snow', label: '❄ Snow' },
+          { value: 'leaves', label: '🍂 Leaves' },
+        ],
+      },
+      { key: 'primaryColor', type: 'color', label: 'Main colour (optional)', help: 'Leave empty to use the festival’s colours.' },
+      { key: 'accentColor', type: 'color', label: 'Second colour (optional)' },
+      { key: 'headerColor', type: 'color', label: 'Top area colour (optional)' },
+      { key: 'tabBarColor', type: 'color', label: 'Bottom bar colour (optional)' },
+      { key: 'bgColor', type: 'color', label: 'Page background (optional)' },
+      {
+        key: 'schedule',
+        type: 'list',
+        label: 'Festival calendar (for “Automatic”)',
+        itemLabel: '{preset}',
+        newItem: { enabled: true, preset: 'diwali', startAt: '', endAt: '', greeting: '' },
+        fields: [
+          { key: 'enabled', type: 'boolean', label: 'On' },
+          { key: 'preset', type: 'select', label: 'Festival', options: FESTIVAL_OPTIONS },
+          { key: 'startAt', type: 'datetime', label: 'Starts' },
+          { key: 'endAt', type: 'datetime', label: 'Ends' },
+          { key: 'greeting', type: 'text', label: 'Greeting (optional)' },
         ],
       },
     ],

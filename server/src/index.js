@@ -87,7 +87,7 @@ setInterval(() => push.poll().catch(() => {}), 5 * 60 * 1000).unref();
 app.use(['/api/app', '/api/auth', '/api/customer', '/api/checkout', '/api/store', '/api/track', '/api/push'], (req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type, X-Customer-Token, If-None-Match');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
@@ -190,7 +190,7 @@ app.get(
     const appRedirect = String(req.query.redirect || 'rosier://auth');
     if (!shopify.allowedAppRedirect(appRedirect)) return res.status(400).send('Bad redirect');
     try {
-      res.redirect(await shopify.startLogin(appRedirect, callbackUrl(req)));
+      res.redirect(await shopify.startLogin(appRedirect, callbackUrl(req), String(req.query.email || '').trim().slice(0, 200)));
     } catch (e) {
       backToApp(res, `${appRedirect}${appRedirect.includes('?') ? '&' : '?'}error=${encodeURIComponent(e.message)}`, false);
     }
@@ -216,6 +216,11 @@ app.post('/api/auth/ticket', wrap(async (req, res) => res.json(await shopify.red
 app.post('/api/auth/refresh', wrap(async (req, res) => res.json(await shopify.refreshLogin(String(req.body?.refreshToken || '')))));
 app.post('/api/auth/logout', wrap(async (req, res) => res.json({ url: await shopify.logoutUrl(String(req.body?.idToken || ''), baseUrl(req), String(req.body?.redirect || '')) })));
 app.get('/api/customer/me', wrap(async (req, res) => res.json(await shopify.customerProfile(req.get('X-Customer-Token')))));
+// Saved addresses (same as "Addresses" in their rosierfoods.com account).
+app.get('/api/customer/addresses', wrap(async (req, res) => res.json({ addresses: await shopify.customerAddresses(req.get('X-Customer-Token')) })));
+app.post('/api/customer/addresses', wrap(async (req, res) => res.json({ addresses: await shopify.createAddress(req.get('X-Customer-Token'), req.body?.address, req.body?.makeDefault) })));
+app.put('/api/customer/addresses', wrap(async (req, res) => res.json({ addresses: await shopify.updateAddress(req.get('X-Customer-Token'), req.body?.id, req.body?.address, req.body?.makeDefault) })));
+app.delete('/api/customer/addresses', wrap(async (req, res) => res.json({ addresses: await shopify.deleteAddress(req.get('X-Customer-Token'), String(req.query.id || '')) })));
 app.post(
   '/api/checkout',
   wrap(async (req, res) => {
