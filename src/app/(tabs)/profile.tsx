@@ -135,6 +135,7 @@ export default function Profile() {
 
   const rows: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; sub?: string; go: () => void }[] = [
     { icon: 'package-variant-closed', label: 'My Orders', sub: 'Track, reorder, review', go: () => router.push('/orders') },
+    { icon: 'map-marker-outline', label: 'Saved addresses', sub: (loggedIn && customer?.address) || 'Add or change delivery addresses', go: () => router.push('/addresses') },
     ...(track.enabled ? [{ icon: 'truck-fast-outline' as const, label: track.title || 'Track order', sub: 'Courier status & tracking number', go: () => router.push('/track') }] : []),
     ...(coupons.enabled && coupons.showList ? [{ icon: 'ticket-percent-outline' as const, label: coupons.listTitle || 'Coupons', sub: 'Offers you can use', go: () => router.push('/coupons') }] : []),
     { icon: 'heart-outline', label: 'Wishlist', sub: `${wish} saved`, go: () => router.push('/wishlist') },

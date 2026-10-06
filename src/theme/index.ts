@@ -3,6 +3,7 @@ import defaults from '../config/defaults.json';
 import { useContent } from '../config/remote';
 import { useApp } from '../store/app';
 import { useColorScheme } from 'react-native';
+import { useFestival } from './festivals';
 
 export const fonts = {
   serif: 'Brygada1918_600SemiBold',
@@ -84,13 +85,15 @@ export function useTheme(): Theme {
   const system = useColorScheme();
   const mode = pref === 'system' ? (system === 'dark' ? 'dark' : 'light') : pref;
   const over = useContent('theme')[mode === 'dark' ? 'dark' : 'light'] as Record<string, unknown> | undefined;
+  const fest = useFestival();
   return useMemo(() => {
     const base = mode === 'dark' ? dark : light;
-    if (!over) return base;
     const out: Theme = { ...base };
-    for (const [k, v] of Object.entries(over)) if (k in base && k !== 'mode' && isColor(v)) (out as any)[k] = v.trim();
+    if (over) for (const [k, v] of Object.entries(over)) if (k in base && k !== 'mode' && isColor(v)) (out as any)[k] = v.trim();
+    // Festival theme (admin panel only) goes on top of everything.
+    if (fest) for (const [k, v] of Object.entries(mode === 'dark' ? fest.dark : fest.light)) if (k in base && isColor(v)) (out as any)[k] = v;
     return out;
-  }, [mode, over]);
+  }, [mode, over, fest]);
 }
 
 export type Layout = (typeof defaults)['theme']['layout'];

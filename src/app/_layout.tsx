@@ -15,7 +15,8 @@ import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FloatingTabBar } from '../components/TabBar';
 import { FlyHost } from '../components/FlyToCart';
 import { RemoteGate } from '../components/RemoteGate';
 import { SeasonalEffects } from '../components/SeasonalEffects';
@@ -26,6 +27,7 @@ import { startNotifications, startUsagePings, syncPush } from '../lib/push';
 import { useAuth } from '../store/auth';
 import { ToastHost } from '../components/Toast';
 import { CartFxHost } from '../components/CartFxHost';
+import { LoginHost } from '../components/InAppLogin';
 import { prefetchImages } from '../components/ui';
 import { Image as ExpoImage } from 'expo-image';
 import { useBanners } from '../data/banners';
@@ -41,6 +43,23 @@ import { router } from 'expo-router';
  * If any screen hits an error, show a friendly "try again" screen instead of closing
  * the app. "Go to Home" also marks the intro as seen so the app can always open.
  */
+/** Screens WITHOUT the bottom bar (the tab screens draw their own; intro, login and checkout pages stay clean). */
+const NO_BOTTOM_BAR = /^\/(home|shop|coins|cart|profile|onboarding|login|auth|preview|order-success)?\/?$/;
+
+/**
+ * Every other screen gets the same bottom bar as Home. Screens inside think the
+ * bottom edge of the phone is just above the bar, so their own buttons sit above it.
+ */
+function BottomBarArea({ show, children }: { show: boolean; children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1 }}>
+      <SafeAreaInsetsContext.Provider value={show ? { ...insets, bottom: 0 } : insets}>{children}</SafeAreaInsetsContext.Provider>
+      {show && <FloatingTabBar />}
+    </View>
+  );
+}
+
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   console.warn('Screen error:', error?.message);
   return (
@@ -164,12 +183,14 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [hydrated]);
 
+  const showBar = !NO_BOTTOM_BAR.test(pathname || '/');
   if (!loaded || !hydrated) return <View style={{ flex: 1, backgroundColor: '#FBEBD8' }} />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: t.bg }}>
       <SafeAreaProvider>
         <StatusBar style={t.mode === 'dark' ? 'light' : 'dark'} />
+        <BottomBarArea show={showBar}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.bg }, animation: 'slide_from_right' }}>
           <Stack.Screen name="index" options={{ animation: 'none' }} />
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
@@ -182,11 +203,13 @@ export default function RootLayout() {
           <Stack.Screen name="track" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="page/[handle]" options={{ animation: 'fade_from_bottom' }} />
         </Stack>
+        </BottomBarArea>
         <SeasonalEffects />
         <FlyHost />
         <RemoteGate />
         <ToastHost />
         <CartFxHost />
+        <LoginHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

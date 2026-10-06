@@ -127,12 +127,33 @@ export async function validToken(): Promise<string | null> {
 }
 
 /** Opens Shopify's sign-in page. Resolves true once the person is logged in. */
-export async function login(): Promise<boolean> {
-  const redirect = Linking.createURL('auth');
-  const start = `${api()}/auth/shopify/start?redirect=${encodeURIComponent(redirect)}`;
+/** The in-app login window (phones): opened by login(), drawn by <LoginHost/> in the root layout. */
+export const useLoginHost = create<{ open: boolean; email: string; resolve: ((ok: boolean) => void) | null; reject: ((e: Error) => void) | null }>(() => ({ open: false, email: '', resolve: null, reject: null }));
+
+/**
+ * Logs in with their Shopify account. On phones this happens inside the app
+ * (in-app window + code auto-fill); on the web preview it uses a popup.
+ */
+export async function login(email?: string): Promise<boolean> {
+  if (Platform.OS !== 'web') {
+    return new Promise<boolean>((resolve, reject) => useLoginHost.setState({ open: true, email: (email ?? useApp.getState().email ?? '').trim(), resolve, reject }));
+  }
+  const { start, redirect } = loginUrls();
   const result = await WebBrowser.openAuthSessionAsync(start, redirect);
   if (result.type !== 'success' || !result.url) return false;
-  const { queryParams } = Linking.parse(result.url);
+  return completeLogin(result.url);
+}
+
+/** Where the in-app login starts, and the app link Shopify sends people back to. */
+export function loginUrls(email = '') {
+  const redirect = Linking.createURL('auth');
+  const e = email.trim();
+  return { redirect, start: `${api()}/auth/shopify/start?redirect=${encodeURIComponent(redirect)}${e ? `&email=${encodeURIComponent(e)}` : ''}` };
+}
+
+/** Finishes the login from the link Shopify sent back (…?ticket=…). */
+export async function completeLogin(url: string): Promise<boolean> {
+  const { queryParams } = Linking.parse(url);
   const ticket = queryParams?.ticket ? String(queryParams.ticket) : '';
   if (!ticket) {
     if (queryParams?.error) throw new Error(String(queryParams.error));
@@ -163,7 +184,8 @@ export async function signOut() {
   const idToken = useTokens.getState().tokens?.idToken ?? null;
   const hadLogin = hasTokens();
   logout();
-  if (!hadLogin) return;
+  // Phones log in through a private in-app window, so there's no Shopify session left to close.
+  if (!hadLogin || Platform.OS !== 'web') return;
   // Let the screen change finish first — opening the browser in the middle of a navigation can crash on Android.
   await new Promise((r) => setTimeout(r, 450));
   try {
@@ -234,3 +256,27 @@ export async function createCheckout(lines: { variantId: number; qty: number }[]
 }
 
 export const hasTokens = () => !!useTokens.getState().tokens;
+
+/* ───────── Saved addresses (the same list as their rosierfoods.com account) ───────── */
+
+export type Address = { id: string; firstName: string; lastName: string; company: string; address1: string; address2: string; city: string; zoneCode: string; province: string; country: string; zip: string; phone: string; formatted: string; isDefault: boolean };
+export type AddressInput = Omit<Address, 'id' | 'formatted' | 'isDefault' | 'province'>;
+
+async function addressCall(method: string, body?: object, query = ''): Promise<Address[]> {
+  const token = await validToken();
+  if (!token) throw Object.assign(new Error('Please log in again.'), { status: 401 });
+  const res = await fetch(`${api()}/api/customer/addresses${query}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Customer-Token': token },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) logout();
+  if (!res.ok) throw Object.assign(new Error(json.error || 'Something went wrong. Please try again.'), { status: res.status });
+  return json.addresses ?? [];
+}
+
+export const fetchAddresses = () => addressCall('GET');
+export const addAddress = (address: AddressInput, makeDefault = false) => addressCall('POST', { address, makeDefault });
+export const editAddress = (id: string, address: AddressInput | null, makeDefault = false) => addressCall('PUT', { id, address, makeDefault });
+export const removeAddress = (id: string) => addressCall('DELETE', undefined, `?id=${encodeURIComponent(id)}`);

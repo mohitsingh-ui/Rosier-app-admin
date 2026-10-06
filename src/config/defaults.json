@@ -1299,5 +1299,52 @@
     "emoji": "",
     "burstAmount": 26,
     "burstSeconds": 1.6
+  },
+  "festival": {
+    "mode": "off",
+    "preset": "diwali",
+    "greeting": "",
+    "showGreeting": true,
+    "showBunting": true,
+    "effect": "auto",
+    "primaryColor": "",
+    "accentColor": "",
+    "headerColor": "",
+    "tabBarColor": "",
+    "bgColor": "",
+    "schedule": [
+      {
+        "id": "diwali-2026",
+        "enabled": true,
+        "preset": "diwali",
+        "startAt": "2026-11-05T00:00:00+05:30",
+        "endAt": "2026-11-12T23:59:00+05:30",
+        "greeting": ""
+      },
+      {
+        "id": "christmas-2026",
+        "enabled": true,
+        "preset": "christmas",
+        "startAt": "2026-12-22T00:00:00+05:30",
+        "endAt": "2027-01-01T23:59:00+05:30",
+        "greeting": ""
+      },
+      {
+        "id": "sankranti-2027",
+        "enabled": true,
+        "preset": "sankranti",
+        "startAt": "2027-01-12T00:00:00+05:30",
+        "endAt": "2027-01-16T23:59:00+05:30",
+        "greeting": ""
+      },
+      {
+        "id": "republic-2027",
+        "enabled": true,
+        "preset": "independence",
+        "startAt": "2027-01-25T00:00:00+05:30",
+        "endAt": "2027-01-26T23:59:00+05:30",
+        "greeting": ""
+      }
+    ]
   }
 }

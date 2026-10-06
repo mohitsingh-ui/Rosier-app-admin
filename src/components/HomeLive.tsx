@@ -153,3 +153,22 @@ export function HomePageCards() {
     </View>
   );
 }
+
+/* ───────── Festival greeting (admin → Festival theme) ───────── */
+
+export function FestivalGreeting() {
+  const { useFestival } = require('../theme/festivals') as typeof import('../theme/festivals');
+  const f = useFestival();
+  if (!f || !f.showGreeting) return null;
+  const c = f.bunting.filter((x) => x.toUpperCase() !== '#FFFFFF');
+  return (
+    <Animated.View entering={FadeInDown.springify()} style={{ marginHorizontal: 16, marginBottom: 12 }}>
+      <Editable id="festival" label="Festival theme">
+        <LinearGradient colors={[c[0] ?? '#A56312', c[1] ?? c[0] ?? '#E3A82B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+          <Text style={{ fontSize: 34 }}>{f.emoji}</Text>
+          <Text style={{ flex: 1, fontFamily: fonts.sansSemi, fontSize: 14.5, lineHeight: 20, color: '#FFFFFF', textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 3 }}>{f.greetingText}</Text>
+        </LinearGradient>
+      </Editable>
+    </Animated.View>
+  );
+}

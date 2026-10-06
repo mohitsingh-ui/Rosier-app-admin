@@ -6,7 +6,7 @@ import { Platform, RefreshControl, ScrollView, Text, useWindowDimensions, View }
 import Animated, { FadeIn, FadeInDown, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
-import { HomePageCards, LiveOrderCard, PushAsk } from '../../components/HomeLive';
+import { FestivalGreeting, HomePageCards, LiveOrderCard, PushAsk } from '../../components/HomeLive';
 import { LiveBannerSlide, LiveTiles } from '../../components/LiveBanners';
 import type { LiveBanner } from '../../data/banners';
 import { RosierLogo, Tagline } from '../../components/Logo';
@@ -237,6 +237,7 @@ export default function Home() {
 
         <LiveOrderCard />
         <PushAsk />
+        <FestivalGreeting />
         <HomePageCards />
 
         <Editable

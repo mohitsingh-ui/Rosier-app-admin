@@ -51,7 +51,7 @@ export default function Account() {
             router.back();
           }}
         />
-        <Button label="Manage addresses on rosierfoods.com" kind="ghost" style={{ marginTop: 12 }} onPress={() => openStorePage('/account')} />
+        <Button label="Saved addresses" kind="ghost" icon="location-outline" style={{ marginTop: 12 }} onPress={() => router.push('/addresses')} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

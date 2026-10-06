@@ -14,6 +14,7 @@ import { Content, IN_EDITOR, isLive, useContent } from '../config/remote';
 import { useApp } from '../store/app';
 import { create } from 'zustand';
 import { Img } from './ui';
+import { useFestival } from '../theme/festivals';
 
 export type Effect = Content['effects']['items'][number];
 type Kind = 'dot' | 'glyph' | 'rect' | 'line' | 'petal' | 'image';
@@ -211,9 +212,13 @@ export const useTryEffect = create<{ effect: Effect | null; n: number }>(() => (
 export function useActiveEffect(): Effect | null {
   const cfg = useContent('effects');
   const off = useApp((s) => s.effectsOff);
-  if (!cfg?.enabled) return null;
-  if (cfg.userToggle && off) return null;
-  return (cfg.items ?? []).find((e) => e && isLive(e)) ?? null;
+  const fest = useFestival();
+  if (cfg?.userToggle && off) return null;
+  const own = cfg?.enabled ? (cfg.items ?? []).find((e) => e && isLive(e)) ?? null : null;
+  if (own) return own;
+  // A festival theme brings its own effect (diyas for Diwali, colours for Holi…) for a few seconds on Home.
+  if (fest?.effectType) return { id: `fest-${fest.id}`, enabled: true, name: fest.name, type: fest.effectType, amount: 26, speed: 1, size: 1, opacity: 0.9, colors: fest.effectType === 'confetti' ? fest.bunting : [], emoji: '', image: '', screens: 'home', stopAfter: 10, startAt: '', endAt: '' } as any;
+  return null;
 }
 
 export function SeasonalEffects() {

@@ -8,6 +8,7 @@ import { useCartCount } from '../store/shop';
 import { fonts, useTheme } from '../theme';
 import { useFly } from './FlyToCart';
 import { RosierLogo } from './Logo';
+import { useFestival } from '../theme/festivals';
 
 type Tab = { name: string; label: string; icon: (c: string, s: number) => React.ReactNode };
 
@@ -36,7 +37,10 @@ export function TabBar({ state, navigation }: any) {
 
   const routes: { key: string; name: string }[] = state.routes;
   const activeName = routes[state.index]?.name;
-  const activeIdx = Math.max(0, TABS.findIndex((tb) => tb.name === activeName));
+  const found = TABS.findIndex((tb) => tb.name === activeName);
+  const activeIdx = Math.max(0, found);
+  const noneActive = found < 0;
+  const fest = useFestival();
   const slot = w / TABS.length;
 
   useEffect(() => {
@@ -68,7 +72,8 @@ export function TabBar({ state, navigation }: any) {
         elevation: 16,
       }}
     >
-      {w > 0 && (
+      {fest?.showBunting && w > 0 && <Bunting width={w} colors={fest.bunting} />}
+      {w > 0 && !noneActive && (
         <Animated.View
           style={[
             {
@@ -78,7 +83,7 @@ export function TabBar({ state, navigation }: any) {
               width: BUBBLE,
               height: BUBBLE,
               borderRadius: BUBBLE / 2,
-              backgroundColor: t.mode === 'dark' ? '#5A3520' : '#3E2415',
+              backgroundColor: fest ? (t.mode === 'dark' ? t.accent : t.primary) : t.mode === 'dark' ? '#5A3520' : '#3E2415',
               borderWidth: 5,
               borderColor: t.mode === 'dark' ? '#2A221D' : '#FFFBF5',
               alignItems: 'center',
@@ -129,6 +134,50 @@ export function TabBar({ state, navigation }: any) {
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * The same bottom bar on every other screen (product page, categories, search…),
+ * so Home / Cart are always one tap away.
+ */
+export function FloatingTabBar() {
+  const { router } = require('expo-router') as typeof import('expo-router');
+  const routes = TABS.map((tb) => ({ key: tb.name, name: tb.name }));
+  const navigation = {
+    emit: () => ({ defaultPrevented: false }),
+    navigate: (name: string) => router.navigate(`/${name}` as any),
+  };
+  return <TabBar state={{ routes, index: -1 }} navigation={navigation} />;
+}
+
+/** Festive bunting (little flags on a string) along the top of the bottom bar. */
+function Bunting({ width, colors }: { width: number; colors: string[] }) {
+  const n = Math.max(6, Math.floor((width - 48) / 22));
+  const step = (width - 48) / n;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 2, left: 24, right: 24, height: 14, zIndex: 1 }}>
+      <View style={{ position: 'absolute', top: 1, left: 0, right: 0, height: 1, backgroundColor: 'rgba(90,53,32,0.35)' }} />
+      {Array.from({ length: n }, (_, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: i * step + step / 2 - 6,
+            top: 1,
+            width: 0,
+            height: 0,
+            borderLeftWidth: 6,
+            borderRightWidth: 6,
+            borderTopWidth: 11,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderTopColor: colors[i % colors.length],
+            opacity: colors[i % colors.length].toUpperCase() === '#FFFFFF' ? 1 : 0.95,
+          }}
+        />
+      ))}
     </View>
   );
 }

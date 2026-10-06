@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useApp } from '../store/app';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RosierLogo } from '../components/Logo';
@@ -19,17 +20,27 @@ export default function Login() {
   const a = useContent('account');
   const flags = useShopifyFlags();
   const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState(useApp.getState().email || '');
+  const native = Platform.OS !== 'web';
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  // After logging in, always land on Home.
+  const loggedIn = () => {
+    success();
+    toast('You’re logged in', 'ok');
+    router.dismissAll?.();
+    router.replace('/home');
+  };
 
   const go = async () => {
+    if (native) {
+      if (!validEmail) return toast('Please enter your email', 'info');
+      useApp.getState().setProfile({ email: email.trim() });
+    }
     setBusy(true);
     try {
-      const ok = await login();
-      if (ok) {
-        success();
-        toast('You’re logged in', 'ok');
-        if (router.canGoBack()) router.back();
-        else router.replace('/home');
-      }
+      const ok = await login(native ? email.trim() : undefined);
+      if (ok) loggedIn();
     } catch (e: any) {
       toast(e?.message || 'Login didn’t work. Please try again.', 'info');
     } finally {
@@ -38,8 +49,8 @@ export default function Login() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 56, paddingBottom: insets.bottom + 30, flexGrow: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: t.bg }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 56, paddingBottom: insets.bottom + 30, flexGrow: 1 }}>
         <Animated.View entering={ZoomIn.springify().damping(14)} style={{ alignItems: 'center' }}>
           <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center' }}>
             <MaterialCommunityIcons name="account-heart-outline" size={48} color={t.primary} />
@@ -67,8 +78,28 @@ export default function Login() {
         </View>
 
         <View style={{ flex: 1, minHeight: 24 }} />
+        {flags.loginEnabled && native && (
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ fontFamily: fonts.sansMedium, fontSize: 13, color: t.textSoft, marginBottom: 6 }}>Your email</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={t.textMute}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="go"
+              onSubmitEditing={go}
+              style={{ height: 54, borderRadius: 16, backgroundColor: t.cardStrong, paddingHorizontal: 16, fontFamily: fonts.sans, fontSize: 16, color: t.text, borderWidth: 1.5, borderColor: validEmail ? t.primary : t.border }}
+            />
+            <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: t.textMute, marginTop: 6 }}>We’ll email you a 6-digit code. No password needed.</Text>
+          </View>
+        )}
         {flags.loginEnabled ? (
-          <Button label={busy ? 'Opening…' : a.loginButton} icon="mail-outline" onPress={go} disabled={busy} style={{ marginTop: 20 }} />
+          <Button label={busy ? 'Opening…' : native ? 'Send me the code' : a.loginButton} icon="mail-outline" onPress={go} disabled={busy} style={{ marginTop: 14 }} />
         ) : (
           <Text style={{ fontFamily: fonts.sansMedium, color: t.textSoft, textAlign: 'center', marginTop: 20 }}>Login is coming soon.</Text>
         )}
@@ -76,6 +107,6 @@ export default function Login() {
           <Text style={{ fontFamily: fonts.sansMedium, color: t.textSoft, fontSize: 15 }}>{a.skipLabel}</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
