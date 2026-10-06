@@ -28,6 +28,7 @@ import { useAuth } from '../store/auth';
 import { ToastHost } from '../components/Toast';
 import { CartFxHost } from '../components/CartFxHost';
 import { LoginHost } from '../components/InAppLogin';
+import { OpeningSplash, prefetchSplash } from '../components/OpeningSplash';
 import { prefetchImages } from '../components/ui';
 import { Image as ExpoImage } from 'expo-image';
 import { useBanners } from '../data/banners';
@@ -157,6 +158,8 @@ export default function RootLayout() {
       });
       // Get the latest content from the admin panel (don't wait more than 4s).
       await withTimeout(useRemote.getState().refresh(), 4000);
+      // Have next launch's opening picture ready on the phone.
+      prefetchSplash(getContent('splash' as any) as any);
       const firstLaunch = !useCoins.getState().initialised;
       useCoins.getState().init();
       if (firstLaunch) {
@@ -210,6 +213,7 @@ export default function RootLayout() {
         <ToastHost />
         <CartFxHost />
         <LoginHost />
+        <OpeningSplash />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

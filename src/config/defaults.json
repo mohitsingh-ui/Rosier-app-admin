@@ -1346,5 +1346,20 @@
         "greeting": ""
       }
     ]
+  },
+  "splash": {
+    "enabled": true,
+    "frequency": "every",
+    "kind": "logo",
+    "logoStyle": "glow",
+    "showTagline": true,
+    "logoColor": "",
+    "media": "",
+    "video": "",
+    "videoSound": false,
+    "fit": "cover",
+    "bg": "",
+    "seconds": 2.4,
+    "tapToSkip": true
   }
 }
