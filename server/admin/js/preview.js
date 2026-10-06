@@ -46,6 +46,7 @@ const ROUTE_FOR = {
   search: '/search',
   theme: '/home',
   festival: '/home',
+  splash: '/home',
   effects: '/home',
   coupons: '/coupons',
   rewards: '/cart',
@@ -244,6 +245,10 @@ export function previewRefresh() {
 }
 
 /** Show an effect in the phone for a few seconds, even if it's switched off. */
+export function previewTrySplash() {
+  post({ type: 'rosier:trySplash' });
+}
+
 export function previewTryCartFx() {
   post({ type: 'rosier:tryCartFx' });
 }
