@@ -17,6 +17,8 @@ import { completeLogin, loginUrls } from '../store/auth';
 import { fonts, useTheme } from '../theme';
 
 const CODE = /\b(\d{6})\b/;
+/** The link Shopify login ends on: rosier://auth?ticket=… (or ?error=…). */
+const isAppLink = (u?: string) => !!u && /^(rosier|exp|exps):\/\//i.test(u) && /[?&](ticket|error)=/.test(u);
 
 function script(email: string) {
   return `(function(){
@@ -123,10 +125,10 @@ export function InAppLogin({ email, onClose, onDone }: { email: string; onClose:
   };
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
+    <Modal visible animationType="slide" onRequestClose={() => !handled.current && onClose()} presentationStyle="fullScreen">
       <View style={{ flex: 1, backgroundColor: t.bg, paddingTop: insets.top }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 52, borderBottomWidth: 1, borderColor: t.border }}>
-          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+          <Pressable onPress={() => !handled.current && onClose()} hitSlop={10} accessibilityLabel="Close" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={24} color={t.text} />
           </Pressable>
           <Text style={{ flex: 1, textAlign: 'center', fontFamily: fonts.sansSemi, fontSize: 16, color: t.text }}>Log in to Rosier</Text>
@@ -143,6 +145,11 @@ export function InAppLogin({ email, onClose, onDone }: { email: string; onClose:
             onMessage={(e: any) => {
               try {
                 const m = JSON.parse(e.nativeEvent.data);
+                // Our login page hands over the result directly (most reliable way back into the app).
+                if (m.type === 'auth' && typeof m.url === 'string') {
+                  finish(m.url);
+                  return;
+                }
                 if (m.type === 'codeStep') {
                   setCodeStep(true);
                   readClipboard(false);
@@ -150,9 +157,20 @@ export function InAppLogin({ email, onClose, onDone }: { email: string; onClose:
               } catch {}
             }}
             onLoadEnd={() => setLoading(false)}
+            // Backups: catch the jump back to the app however the web view reports it.
+            onNavigationStateChange={(nav: any) => {
+              if (isAppLink(nav?.url)) finish(nav.url);
+            }}
+            onLoadStart={(e: any) => {
+              if (isAppLink(e?.nativeEvent?.url)) finish(e.nativeEvent.url);
+            }}
+            onError={(e: any) => {
+              const u = e?.nativeEvent?.url;
+              if (isAppLink(u)) finish(u);
+            }}
             onShouldStartLoadWithRequest={(req: any) => {
               // Shopify sends them back to rosier://auth?ticket=… — finish the login right here.
-              if (req.url.startsWith(redirect) || /^(rosier|exp|exps):\/\//.test(req.url)) {
+              if (isAppLink(req.url)) {
                 finish(req.url);
                 return false;
               }
