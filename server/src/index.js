@@ -177,11 +177,15 @@ function backToApp(res, target, ok, title) {
   res.set('Cache-Control', 'no-store');
   res.set('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
   res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rosier</title><meta http-equiv="refresh" content="0;url=${esc(target)}">
+<title>Rosier</title><meta http-equiv="refresh" content="2;url=${esc(target)}">
 <style>body{font-family:system-ui,sans-serif;background:#FBEBD8;color:#3E2415;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:24px}
 a{display:inline-block;margin-top:18px;background:#3E2415;color:#FBE6CF;padding:14px 26px;border-radius:28px;text-decoration:none;font-weight:600}</style></head>
 <body><div><h2>${esc(title || (ok ? 'You’re logged in 🎉' : 'Login didn’t finish'))}</h2><p>Taking you back to the Rosier app…</p><a href="${esc(target)}">Open the Rosier app</a></div>
-<script>location.replace(${JSON.stringify(target)})</script></body></html>`);
+<script>
+// Inside the app's own login window: hand the result straight to the app (custom app links don't open from there).
+try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'auth', url: ${JSON.stringify(target)} })); } catch (e) {}
+setTimeout(function () { location.replace(${JSON.stringify(target)}); }, window.ReactNativeWebView ? 600 : 0);
+</script></body></html>`);
 }
 
 app.get(
